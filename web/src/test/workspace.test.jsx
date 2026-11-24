@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createWorkspace, WORKSPACE_ID } from "../workspace.js";
+import { createWorkspace, FORGOTTEN_DEDUPE_MS, WORKSPACE_ID } from "../workspace.js";
 import { screen, text, useLabHarness, waitFor } from "./util.jsx";
 import { fireEvent } from "@testing-library/react";
 
@@ -62,9 +62,12 @@ describe("the server forgot this workspace", () => {
     try {
       await t.fetch("/x"); expect(n).toBe(0);
       fresh = false; await t.fetch("/x"); expect(n).toBe(0);
-      fresh = true; await t.fetch("/x"); expect(n).toBe(1);
-      await t.fetch("/x"); expect(n).toBe(2); // each later "fresh" is a new forgetting
+      fresh = true;       await t.fetch("/x"); expect(n).toBe(1);
+      await t.fetch("/x"); expect(n).toBe(1); // parallel answers to the SAME eviction land in the dedupe window: one banner
+      await new Promise((r) => setTimeout(r, FORGOTTEN_DEDUPE_MS + 20));
+      await t.fetch("/x"); expect(n).toBe(2); // after the window, a later fresh answer is a new forgetting
       t.markUnused(); await t.fetch("/x"); expect(n).toBe(2); // the tab's own Reset
+      await new Promise((r) => setTimeout(r, FORGOTTEN_DEDUPE_MS + 20));
       await t.fetch("/x"); expect(n).toBe(3);
     } finally { restore(); }
   });

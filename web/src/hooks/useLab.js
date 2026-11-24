@@ -23,6 +23,8 @@ export default function useLab() {
   const [forgotten, setForgotten] = useState(false); // the server forgot this tab's workspace (see workspace.js)
   const [epoch, setEpoch] = useState(0);
   const seq = useRef(0);
+  const verticalRef = useRef(vertical); // the forgotten-workspace handler reads the CURRENT vertical without re-subscribing on every change
+  useEffect(() => { verticalRef.current = vertical; }, [vertical]);
 
   const load = useCallback(async (v) => {
     const mine = ++seq.current; // a late answer for a vertical or a mode the visitor has left is dropped
@@ -36,7 +38,8 @@ export default function useLab() {
 
   useEffect(() => { load(undefined); }, [load]);
   // The server made a new lab for an id this tab had already used: what the page showed is gone. Say so, drop the stale result and load everything again.
-  useEffect(() => onWorkspaceForgotten(() => { clearScenarioHash(); setForgotten(true); setLast(null); setObs(null); setEpoch((n) => n + 1); load(vertical ?? undefined); }), [load, vertical]);
+  // Subscribed once: the handler reads the vertical through a ref, so switching verticals does not tear the subscription down and put it back.
+  useEffect(() => onWorkspaceForgotten(() => { clearScenarioHash(); setForgotten(true); setLast(null); setObs(null); setEpoch((n) => n + 1); load(verticalRef.current ?? undefined); }), [load]);
   const setVertical = useCallback((v) => { clearScenarioHash(); setVerticalState(v); setEpoch((n) => n + 1); load(v); }, [load]);
 
   // Rule 19: the server decides. A 409 (Real not available) is shown as the server worded it; nothing else changes.

@@ -14,6 +14,8 @@ const USED_KEY = "pma.workspace.used";
 export const WORKSPACE_ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
 // Where there is no crypto object. A typed array's map() returns a NEW array and leaves the original zero, so the bytes are filled in place.
 export const fallbackCrypto = { getRandomValues(a) { for (let i = 0; i < a.length; i += 1) a[i] = Math.floor(Math.random() * 256); return a; } };
+// Parallel calls answered fresh by the same eviction land within this window; a later, genuinely new eviction reports again.
+export const FORGOTTEN_DEDUPE_MS = 2000;
 const hex = (bytes) => [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
 
 export function createWorkspace({
@@ -27,6 +29,7 @@ export function createWorkspace({
   const token = hex(random().getRandomValues(new Uint8Array(8))); // this load of this tab, never stored
   const listeners = new Set();
   let generation = 0; // goes up whenever this tab deliberately starts over (its own Reset, a new id): an answer to a request sent before that says nothing about the new state
+  let lastForgottenAt = 0; // one eviction is one banner: N parallel calls answered fresh by the same eviction report once, not once each
   const read = (k) => { try { return session().getItem(k); } catch { return null; } };
   const write = (k, v) => { try { session().setItem(k, v); } catch { /* blocked */ } };
   const drop = (k) => { try { session().removeItem(k); } catch { /* blocked */ } };
@@ -41,7 +44,7 @@ export function createWorkspace({
   }
 
   // For tests and for a duplicate: a new tab starts with a new id that no server has seen.
-  function forget() { memo = null; generation += 1; drop(KEY); drop(USED_KEY); }
+  function forget() { memo = null; generation += 1; lastForgottenAt = 0; drop(KEY); drop(USED_KEY); }
 
   // Answers another tab's claim of the id this tab holds.
   const answer = (e) => {
@@ -70,10 +73,11 @@ export function createWorkspace({
   // `usedWhenSent` and `generationWhenSent` are what the tab knew when the REQUEST WENT OUT, never when the answer arrived: parallel first-load calls from a brand-new
   // tab can be answered in any order, and a non-fresh answer that arrives first must not make the fresh one look like a forgotten workspace.
   // An answer to a request sent before the tab started over (generation changed) says nothing about the new state: it touches nothing and reports nothing.
+  // One eviction is reported once: the parallel calls it answers all carry fresh within the same instant, and only the first fires the banner.
   function noteFresh(id, usedWhenSent, generationWhenSent) {
     if (generationWhenSent !== generation) return;
     write(USED_KEY, id);
-    if (usedWhenSent) for (const fn of [...listeners]) fn();
+    if (usedWhenSent && Date.now() - lastForgottenAt > FORGOTTEN_DEDUPE_MS) { lastForgottenAt = Date.now(); for (const fn of [...listeners]) fn(); }
   }
 
   const fetchWithWorkspace = async (url, opts = {}) => {

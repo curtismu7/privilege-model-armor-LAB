@@ -100,7 +100,7 @@ export default function App() {
         <p className="banner" role="note" data-state={source === "real" ? "live" : "mock"} data-testid="banner">{banner}</p>
         {lab.forgotten && (
           <div className="reset-note" role="status" data-testid="workspace-forgotten">
-            <p>The server forgot this workspace (it keeps a limited number): the lab was reset to its defaults, and the key and the last result you had are gone.</p>
+            <p>The server forgot this workspace (it keeps a limited number, and a Reset from a terminal drops one too): the lab was reset to its defaults, and the key and the last result you had are gone.</p>
             <button type="button" onClick={lab.dismissForgotten} data-testid="workspace-forgotten-dismiss">Dismiss</button>
           </div>
         )}
