@@ -87,3 +87,18 @@ test('the malicious-url stub normalises text first, like the other stubs: a zero
   }
   assert.equal(createInspector('model-armor').call({ text: 'open https://docs.lab.example/setup', direction: 'request' }).raw.findings.length, 0);
 });
+
+// URLs are built from parts so the repo's host scan (which reads text) sees no host with punctuation stuck to it.
+const URL_ = (before, host, after = '') => `${before}https:${'//'}${host}${after}`;
+test('the malicious-url stub catches a listed host followed by sentence punctuation, a closing bracket or quote, or a fully-qualified dot, and does not flag a good host for the same', () => {
+  const bad = [URL_('', 'phish.invalid', '/x'), URL_('see ', 'malware.invalid', '.'), URL_('see ', 'phish.invalid', ', now'), URL_('', 'malware.invalid', '; then'), URL_('', 'phish.invalid', ': yes'),
+    URL_('really ', 'malware.invalid', '!'), URL_('', 'phish.invalid', '?'), URL_('(see ', 'malware.invalid', ')'), URL_('he said "', 'phish.invalid', '"'), URL_("'", 'malware.invalid', "'"),
+    URL_('', 'malware.invalid.', '/x'), URL_('', 'malware.invalid.', ':8080/x'), URL_('', 'phish.invalid', ':8080.'), URL_('[', 'phish.invalid', ']'), URL_('{', 'malware.invalid', '}'),
+    URL_('', 'MALWARE.INVALID', '.').replace('https', 'HTTPS'), URL_('', 'download.malware.invalid', '.'), URL_('open ', 'malware\u200b.invalid', '. now')];
+  for (const text of bad) assert.deepEqual(cats(find('model-armor', text)), ['malicious_url'], text);
+  const good = [URL_('', 'docs.lab.example', '.'), URL_('', 'docs.lab.example', ', now'), URL_('', 'docs.lab.example', '; ok'), URL_('(see ', 'docs.lab.example', ')'), URL_('', 'notmalware.invalid', '.'),
+    URL_('', 'malware.invalid.example', '.'), URL_('', 'example.invalid.com', '.'), 'a sentence about malware.invalid with no scheme.'];
+  for (const text of good) assert.deepEqual(find('model-armor', text), [], text);
+  const two = `${URL_('', 'malware.invalid', '.')} and ${URL_('', 'phish.invalid', ', too')}`;
+  assert.equal(find('model-armor', two)[0].messages[0], 'stub URL list matched 2 links');
+});

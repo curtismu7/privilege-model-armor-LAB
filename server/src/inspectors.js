@@ -47,8 +47,10 @@ const sensitive = (text) => {
 };
 const badUrl = (text) => {
   let n = 0;
-  for (const m of normalizeForDetection(String(text)).matchAll(/\bhttps?:\/\/([^\s/?#"'`<>\\)]{1,253})/gi)) {
-    const host = m[1].replace(/:\d+$/, '').replace(/^[^@]*@/, '');
+  // The host ends at a space, a path, a query, a quote or a closing bracket, or a comma or semicolon. Punctuation that ends a SENTENCE (". , ; : ! ?") is not part of
+  // the name, and neither is the trailing dot of a fully-qualified name (malware.invalid.): both are stripped before the list is checked.
+  for (const m of normalizeForDetection(String(text)).matchAll(/\bhttps?:\/\/([^\s/?#"'`<>\\)\]},;]{1,253})/gi)) {
+    const host = m[1].replace(/[.,;:!?]+$/, '').replace(/:\d+$/, '').replace(/[.,;:!?]+$/, '').replace(/^[^@]*@/, '');
     if (BAD_HOST.test(host)) n += 1;
   }
   return n ? [`stub URL list matched ${n} link${n > 1 ? 's' : ''}`] : [];
