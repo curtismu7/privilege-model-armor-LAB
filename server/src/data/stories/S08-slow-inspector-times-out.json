@@ -1,0 +1,8 @@
+{
+  "id": "S08",
+  "scenario": "slow-inspector-times-out",
+  "title": "A slow inspector hits its timeout",
+  "goal": "How long {{castKey}} waits for the inspector is {{castOwner}}'s call, while {{castApp}} is {{castTask}}.",
+  "obstacle": "The inspector answers, but later than the key is willing to wait.",
+  "control": "The gateway gives up at the key's timeout on the lab clock. It is a timeout, not a finding: closed blocks the call, open lets it through, whatever the prompt holds."
+}

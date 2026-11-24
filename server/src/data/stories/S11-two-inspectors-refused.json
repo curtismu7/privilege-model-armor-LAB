@@ -1,0 +1,8 @@
+{
+  "id": "S11",
+  "scenario": "two-inspectors-refused",
+  "title": "Two inspectors at once are refused",
+  "goal": "{{castBrand}} asks for two inspectors on {{castKey}} so that {{castApp}} gets a second opinion while it is {{castTask}}.",
+  "obstacle": "The key can have only one inspector, and a quiet choice of one of the two would be a surprise.",
+  "control": "The request is refused with the named error two_inspectors and the key keeps what it had: the next prompt is still inspected by the first inspector."
+}

@@ -1,4 +1,4 @@
-// The simulation banner: what is simulated, and what is and is not sourced. Shown on every page later (rule 2) and returned by /api/info.
+// The simulation banner: what is simulated, and what is and is not sourced. Shown on every page (rule 2) and returned by /api/info.
 export const BANNER = 'SIMULATED. External inspectors run as lab stubs with deterministic rules on a lab clock: no Google Cloud Model Armor, no Azure AI Content Safety, no Amazon Bedrock Guardrails, '
   + 'no gateway, no LLM provider and no network call. The stub rules say nothing about how any real inspector detects anything. '
   + 'Only what the 2026-11-21 release notes say is sourced: one external inspector per key (Model Armor in AI Guard) and the authority cap that holds it advisory. '

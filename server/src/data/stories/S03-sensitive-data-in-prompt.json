@@ -1,0 +1,8 @@
+{
+  "id": "S03",
+  "scenario": "sensitive-data-in-prompt",
+  "title": "A card number in the prompt never reaches the model",
+  "goal": "Payment card numbers must not be sent to a model while {{castApp}} is {{castTask}}: that is {{castOwner}}'s rule.",
+  "obstacle": "A user types a card number into the prompt. Once it is in a model request it is already outside the company's hands.",
+  "control": "The inspector reports sensitive data and the enforcing key blocks the call. The number is masked everywhere the lab shows the prompt, and the model is not called."
+}

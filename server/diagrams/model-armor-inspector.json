@@ -1,0 +1,136 @@
+{
+  "schema": "diagram-studio/1",
+  "id": "model-armor-inspector",
+  "title": "External inspector in AI Guard: enforcing or advisory",
+  "lede": "In addition to the self-hosted ML sidecar, a key’s external guardrail can be GCP Model Armor, Azure AI Content Safety or Amazon Bedrock Guardrails: one inspector per key, with an authority cap that can hold it advisory while it is evaluated on live traffic (release notes). The lab’s inspectors are stubs with no claim about detection quality; what happens on a finding is the lab’s own model.",
+  "groups": {
+    "app": {
+      "label": "Caller",
+      "color": "dark"
+    },
+    "gw": {
+      "label": "Gateway: AI Guard",
+      "color": "red"
+    },
+    "insp": {
+      "label": "The key’s one external inspector",
+      "color": "blue"
+    },
+    "out": {
+      "label": "Outcome (lab model)",
+      "color": "grey"
+    }
+  },
+  "nodes": [
+    {
+      "id": "app",
+      "group": "app",
+      "label": "Your app",
+      "sub": [
+        "Sends a request with the LLM key"
+      ],
+      "x": 0,
+      "y": 170
+    },
+    {
+      "id": "gw",
+      "group": "gw",
+      "label": "Gateway: AI Guard",
+      "sub": [
+        "One external inspector per key (release notes)",
+        "Authority cap: enforcing or advisory"
+      ],
+      "x": 400,
+      "y": 170
+    },
+    {
+      "id": "inspector",
+      "group": "insp",
+      "label": "External inspector",
+      "sub": [
+        "GCP Model Armor, Azure AI Content Safety or Amazon Bedrock Guardrails (release notes)",
+        "Lab: a stub, not the real service"
+      ],
+      "x": 800,
+      "y": 170
+    },
+    {
+      "id": "refusal",
+      "group": "out",
+      "label": "Refusal (enforcing)",
+      "sub": [
+        "The gateway’s own refusal: lab model",
+        "Wording: lab model"
+      ],
+      "x": 1200,
+      "y": 0
+    },
+    {
+      "id": "pass",
+      "group": "out",
+      "label": "Call goes through",
+      "sub": [
+        "Clean, or a finding held advisory (lab model)",
+        "The model or tool is reached"
+      ],
+      "x": 1200,
+      "y": 340
+    }
+  ],
+  "edges": [
+    {
+      "source": "app",
+      "target": "gw",
+      "label": "1 request"
+    },
+    {
+      "source": "gw",
+      "target": "inspector",
+      "label": "2 send for inspection"
+    },
+    {
+      "source": "inspector",
+      "target": "refusal",
+      "label": "3a finding while enforcing: block",
+      "dashed": true
+    },
+    {
+      "source": "inspector",
+      "target": "pass",
+      "label": "3b clean, or advisory: log any finding, pass"
+    }
+  ],
+  "steps": [
+    {
+      "title": "A request reaches AI Guard",
+      "what": "The request arrives at the gateway with the LLM key. The key has one external inspector (release notes).",
+      "edges": [
+        0
+      ]
+    },
+    {
+      "title": "Ask the inspector",
+      "what": "The gateway sends the content to the key’s inspector. In the lab model, selecting another inspector replaces the first, as only one is allowed per key.",
+      "why": "UNVERIFIED (lab model): which filters each inspector offers, how findings are reported, what the gateway does when the inspector is unreachable (fail open or fail closed), and the timeout value.",
+      "edges": [
+        1
+      ]
+    },
+    {
+      "title": "Enforcing: the gateway blocks",
+      "what": "In the lab model, while the inspector is enforcing, a finding stops the call and the caller gets the gateway’s own refusal.",
+      "why": "Lab model: a malformed answer from the inspector is treated as a named error, not a pass.",
+      "edges": [
+        2
+      ]
+    },
+    {
+      "title": "Advisory: log and pass",
+      "what": "The authority cap can hold the inspector advisory while it is evaluated on live traffic (release notes). In the lab model the same finding is then logged and the call goes through, and switching back to enforcing blocks again.",
+      "why": "Release notes: the authority cap can hold the inspector advisory. Logging the finding and passing the call is lab model.",
+      "edges": [
+        3
+      ]
+    }
+  ]
+}

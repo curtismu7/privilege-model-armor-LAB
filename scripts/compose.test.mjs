@@ -1,0 +1,97 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { test } from 'node:test';
+import { portProblem } from '../server/src/safety.js';
+
+// Every published port must be bound to loopback on the host. A small line parser (no YAML dependency).
+export function publishedPorts(text) {
+  const out = [];
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^(\s*)ports:\s*$/.exec(lines[i]);
+    if (!m) continue;
+    for (let j = i + 1; j < lines.length; j++) {
+      const item = /^\s*-\s*["']?([^"'\s#]+)["']?/.exec(lines[j]);
+      if (!item || lines[j].search(/\S/) <= m[1].length) break;
+      out.push(item[1]);
+    }
+  }
+  return out;
+}
+const here = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+
+test('docker-compose.yml publishes only on 127.0.0.1', () => {
+  const ports = publishedPorts(here('docker-compose.yml'));
+  assert.deepEqual(ports, ['127.0.0.1:${HOST_PORT:-7839}:7839']);
+  for (const p of ports) assert.match(p, /^127\.0\.0\.1:/, `${p} must start with 127.0.0.1:`);
+});
+
+test('the parser flags an unbound or wildcard publish', () => {
+  for (const bad of ['- "7839:7839"', '- "0.0.0.0:7839:7839"', '- 7839', '- "::1:7839:7839"']) {
+    const ports = publishedPorts(`services:\n  a:\n    ports:\n      ${bad}\n`);
+    assert.equal(ports.length, 1);
+    assert.doesNotMatch(ports[0], /^127\.0\.0\.1:/);
+  }
+});
+
+test('compose default host port and Dockerfile port are allowed ports and agree (7839, provisional)', () => {
+  const compose = here('docker-compose.yml');
+  const host = Number(/\$\{HOST_PORT:-(\d+)\}/.exec(compose)[1]);
+  assert.equal(host, 7839);
+  assert.equal(portProblem(host), null);
+  const docker = here('Dockerfile');
+  const port = Number(/^EXPOSE (\d+)/m.exec(docker)[1]);
+  assert.equal(port, 7839);
+  assert.equal(portProblem(port), null);
+  assert.match(compose, new RegExp(`:${port}"`));
+  assert.match(compose, /PORT: "7839"/);
+  assert.match(docker, /^ENV PMA_BIND=0\.0\.0\.0$/m);
+});
+
+test('the container is non-root and locked down: USER node, read-only fs, no capabilities, no new privileges', () => {
+  const compose = here('docker-compose.yml');
+  assert.match(here('Dockerfile'), /^USER node$/m);
+  assert.match(compose, /read_only: true/);
+  assert.match(compose, /cap_drop: \[ALL\]/);
+  assert.match(compose, /no-new-privileges:true/);
+});
+
+test('the long-running service restarts unless stopped (rule 21) and has a healthcheck on /api/health', () => {
+  const compose = here('docker-compose.yml');
+  assert.match(compose, /^\s+restart: unless-stopped$/m);
+  const hc = /healthcheck:[\s\S]*?test: \[(.*)\]/.exec(compose);
+  assert.ok(hc, 'a healthcheck is defined');
+  assert.match(hc[1], /127\.0\.0\.1:7839\/api\/health/);
+  assert.match(hc[1], /demo-health\/1/);
+});
+
+test('the image builds the web app, serves web/dist, ships the diagram data and the talk track, and installs no dev dependency at run time', () => {
+  const docker = here('Dockerfile');
+  assert.match(docker, /npm run build -w web/);
+  assert.match(docker, /COPY --from=build \/app\/web\/dist web\/dist/);
+  assert.match(docker, /COPY server\/diagrams server\/diagrams/);
+  assert.match(docker, /COPY docs\/talk-track\.md docs\/talk-track\.md/);
+  assert.match(docker, /npm ci --omit=dev -w server/);
+  assert.match(docker, /^FROM node:26-alpine/m);
+});
+
+test('compose never mounts the Docker socket and passes no log-reader settings', () => {
+  const compose = here('docker-compose.yml');
+  assert.doesNotMatch(compose, /docker\.sock/);
+  assert.doesNotMatch(compose, /RUN_OBS_/);
+});
+
+test('the .dockerignore keeps docs out of the image but re-includes the talk track the server reads (a COPY of an ignored file fails the build)', () => {
+  const ignore = here('.dockerignore').split('\n').map((l) => l.trim());
+  assert.ok(ignore.includes('!docs/talk-track.md'), 'the talk track is re-included');
+  assert.ok(!ignore.includes('docs'), 'a bare "docs" would swallow the exception');
+  assert.ok(ignore.indexOf('docs/*') !== -1 && ignore.indexOf('docs/*') < ignore.indexOf('!docs/talk-track.md'), 'the exception comes after the pattern it undoes');
+  assert.match(here('Dockerfile'), /COPY docs\/talk-track\.md docs\/talk-track\.md/);
+});
+
+test('customer.config.json can be mounted: compose documents the read-only bind mount (the root file system is read-only) and the README says how', () => {
+  const compose = here('docker-compose.yml');
+  assert.match(compose, /customer\.config\.json:\/app\/customer\.config\.json:ro/);
+  assert.match(compose, /customer\.config\.example\.json/);
+  assert.match(here('README.md'), /customer\.config\.json:\/app\/customer\.config\.json:ro/);
+});

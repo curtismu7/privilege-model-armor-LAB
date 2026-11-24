@@ -1,0 +1,8 @@
+{
+  "id": "S07",
+  "scenario": "inspector-unreachable-closed-vs-open",
+  "title": "The inspector is down: fail closed blocks, fail open lets it through",
+  "goal": "{{castBrand}} has to decide what {{castApp}} does while it is {{castTask}} and the inspector cannot be reached.",
+  "obstacle": "An unreachable inspector means nothing is being checked. Blocking everything is safe but stops the work; letting calls through keeps working but unchecked.",
+  "control": "With fail closed even a harmless prompt is blocked with a named error. With fail open the call goes through and the gateway log says it failed open. Whether the product offers both is not known."
+}

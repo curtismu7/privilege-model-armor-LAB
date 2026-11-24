@@ -18,6 +18,13 @@ export function assertBindAllowed(host, env = process.env) {
 
 export const DEFAULT_PORT = 7839; // PROVISIONAL: not claimed on the board yet
 const FORBIDDEN_PORTS = new Set([8080, 5173, 3000, 3900, 4000, 4400, 4510, 4600, 4601, 4840, 18080, 19080, 19090]);
+// Why a PUBLISHED port (compose, Dockerfile) is not allowed, or null: the family's packed range is 7800-7999. (resolvePort stays looser for local use: PORT may be any free port.)
+export function portProblem(port) {
+  if (!Number.isInteger(port)) return 'PORT is not an integer';
+  if (FORBIDDEN_PORTS.has(port)) return `port ${port} is reserved for something else`;
+  if (port < 7800 || port > 7999) return `port ${port} is outside the packed range 7800-7999`;
+  return null;
+}
 export function resolvePort(env = process.env) {
   const port = env.PORT === undefined || env.PORT === '' ? DEFAULT_PORT : Number(env.PORT);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('PORT must be a whole number from 1024 to 65535');

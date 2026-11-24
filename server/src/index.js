@@ -16,5 +16,5 @@ if (!allPassed(checks)) {
 const host = assertBindAllowed(bindHost(), process.env);
 const app = createApp();
 const { url } = await startHttpServer({ port: resolvePort(), host, app });
-console.log(`[privilege-model-armor-lab] API at ${url}api/ (Mock only; bound to ${host}; port 7839 is PROVISIONAL, not claimed yet; no outbound call)`);
+console.log(`[privilege-model-armor-lab] API at ${url}api/ (Mock only; bound to ${host}; port 7839 is claimed provisionally; no outbound call)`);
 console.log(`[privilege-model-armor-lab] health: ${url}api/health`);

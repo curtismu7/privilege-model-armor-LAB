@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { allowedExtraHosts, assertBindAllowed, bindHost, hostOf, isLoopbackHost, resolvePort } from '../src/safety.js';
+import { allowedExtraHosts, assertBindAllowed, bindHost, hostOf, isLoopbackHost, portProblem, resolvePort } from '../src/safety.js';
 
 test('loopback bind only, unless PMA_BIND is set on purpose', () => {
   assert.equal(bindHost({}), '127.0.0.1');
@@ -28,4 +28,9 @@ test('LAB_ALLOWED_HOSTS rejects what is not a host name', () => {
   assert.deepEqual([...allowedExtraHosts({ LAB_ALLOWED_HOSTS: 'a.example, B.example' })], ['a.example', 'b.example']);
   assert.throws(() => allowedExtraHosts({ LAB_ALLOWED_HOSTS: 'a b' }), /not a host name/);
   assert.throws(() => allowedExtraHosts({ LAB_ALLOWED_HOSTS: 'x/../y' }), /not a host name/);
+});
+
+test('a published port must be in the packed range 7800-7999 and not reserved (portProblem); the default port is allowed', () => {
+  assert.equal(portProblem(7839), null);
+  for (const p of [7799, 8000, 8080, 3000, 4400, 18080, 78.5, NaN]) assert.notEqual(portProblem(p), null, String(p));
 });

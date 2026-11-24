@@ -1,0 +1,8 @@
+{
+  "id": "S06",
+  "scenario": "advisory-logs-then-enforcing-blocks",
+  "title": "Advisory authority logs the finding; enforcing blocks it again",
+  "goal": "Before {{castKey}} is allowed to block anything, {{castOwner}} wants to watch the inspector on live traffic while {{castApp}} is {{castTask}}.",
+  "obstacle": "Turning an inspector on in enforcing mode straight away could block legitimate traffic nobody has seen yet.",
+  "control": "The authority cap holds the inspector advisory: the same finding is written to the gateway log and the call goes through. Switching the key back to enforcing blocks the very same prompt."
+}
