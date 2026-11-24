@@ -58,7 +58,8 @@ test('advisory scenario: the same prompt, the same finding, a different decision
   const [adv, enf] = runScenario('advisory-logs-then-enforcing-blocks').steps.map((s) => s.run);
   const asked = (r) => r.findings.filter((f) => f.direction === 'request').map((f) => f.category);
   assert.deepEqual(asked(adv), asked(enf));
-  assert.ok(adv.findings.some((f) => f.direction === 'response'), 'advisory let the call through, so the model\'s echo of the prompt was inspected as well');
+  assert.equal(adv.findings.some((f) => f.direction === 'response'), false, 'the model\'s answer does not repeat the prompt, so the response check has nothing of the prompt to re-flag');
+  assert.deepEqual([adv.findingCount, enf.findingCount], [1, 1]);
   assert.deepEqual([adv.outcome, enf.outcome], ['passed', 'blocked']);
   assert.deepEqual([adv.key.authority, enf.key.authority], ['advisory', 'enforcing']);
 });

@@ -3,7 +3,7 @@ import { MAX_PROMPT_CHARS } from './model-gateway-sim/providerStub.js';
 
 export const BOUNDS = Object.freeze({
   maxPromptChars: MAX_PROMPT_CHARS, // the kit provider's own limit; the lab refuses before inspecting
-  maxBodyBytes: 64 * 1024,
+  maxBodyBytes: 128 * 1024,         // a prompt of maxPromptChars control characters is 6 bytes each once JSON-escaped (\u0001): 120000 plus the wrapper
   maxFindings: 50,                  // per inspection; more is malformed
   maxMessageChars: 300,
   maxMessages: 5,

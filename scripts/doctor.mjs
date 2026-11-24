@@ -21,7 +21,8 @@ report(self.ok ? 'pass' : 'fail', 'netguard-self-test', self.ok ? `${self.blocke
 try {
   const { createApp, startHttpServer } = await load('server/src/app.js');
   const { SCENARIOS } = await load('server/src/scenarios.js');
-  const app = createApp();
+  const { validateConfig } = await load('server/src/customer.js'); // the doctor never reads the author's own customer.config.json
+  const app = createApp({ customer: validateConfig({}), log: () => {} });
   const { server, url } = await startHttpServer({ port: 0, host: '127.0.0.1', app });
   try {
     const base = url.replace(/\/$/, '');
@@ -51,10 +52,10 @@ try {
 
 report(guard.attempts.length === 0 ? 'pass' : 'fail', 'zero-outbound', `${guard.attempts.length} real outbound attempts during the doctor run`);
 
-const port = Number(process.env.PORT) || 7839;
+const port = Number(process.env.PORT) || 7846;
 await new Promise((resolve) => {
   const s = net.createServer();
   s.once('error', (e) => { report('fail', 'port-free', `${port} is not free (${e.code})`); resolve(); });
-  s.listen(port, '127.0.0.1', () => s.close(() => { report('pass', 'port-free', `${port} is free (7839 is PROVISIONAL, not claimed yet)`); resolve(); }));
+  s.listen(port, '127.0.0.1', () => s.close(() => { report('pass', 'port-free', `${port} is free (7846 is claimed provisionally; not yet on the shelf registry)`); resolve(); }));
 });
 process.exit(failed ? 1 : 0);

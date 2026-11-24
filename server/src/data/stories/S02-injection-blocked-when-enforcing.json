@@ -1,0 +1,8 @@
+{
+  "id": "S02",
+  "scenario": "injection-blocked-when-enforcing",
+  "title": "A prompt injection is stopped by the gateway",
+  "goal": "{{castBrand}} wants {{castApp}} to refuse an attempt to override its instructions while it is {{castTask}}.",
+  "obstacle": "A user pastes text that tells the model to ignore its instructions and reveal its system prompt. The model alone would simply read it.",
+  "control": "The inspector reports a prompt injection finding and the key is enforcing, so the gateway answers with its own named refusal. The model is never called and no tokens are spent."
+}

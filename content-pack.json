@@ -1,0 +1,329 @@
+{
+  "schema": "demo-content-pack/1",
+  "id": "privilege-model-armor-lab",
+  "title": "Privilege Model Armor LAB",
+  "version": "0.1.0",
+  "demo": {
+    "id": "privilege-model-armor-lab",
+    "name": "Privilege Model Armor LAB",
+    "catalog": "D000",
+    "baseUrl": "http://localhost:7846",
+    "doctor": "/api/health",
+    "tags": [
+      "llm",
+      "inspector",
+      "ai-guard",
+      "privilege",
+      "simulated",
+      "mock-only"
+    ]
+  },
+  "glossary": [
+    {
+      "id": "external-inspector",
+      "term": "External inspector",
+      "definition": "An LLM key can use one external inspector in AI Guard; the lab models Model Armor first, with Azure AI Content Safety and Bedrock Guardrails as stub alternatives. A key has one: selecting another replaces the first. The lab's inspectors are stubs with fixed rules and say nothing about any vendor's detection.",
+      "aliases": [
+        "Model Armor",
+        "inspector"
+      ]
+    },
+    {
+      "id": "authority-cap",
+      "term": "Authority cap",
+      "definition": "The authority setting decides whether the inspector's findings enforce or only advise. Enforcing: a finding blocks the call. Advisory: the same finding is logged and the call goes through. The cap existing is from the 2026-11-21 release notes; what a blocked or logged call looks like is the lab's own model.",
+      "aliases": [
+        "advisory",
+        "enforcing"
+      ]
+    },
+    {
+      "id": "fail-open-closed",
+      "term": "Fail open or closed",
+      "definition": "What the key does when its inspector is unreachable or too slow: closed blocks the call, open lets it through and the gateway log says so. Whether the product offers either is UNVERIFIED; the lab shows both as two configurations.",
+      "aliases": [
+        "failMode",
+        "timeout"
+      ]
+    },
+    {
+      "id": "named-error",
+      "term": "Named error",
+      "definition": "A refusal or error that carries its own code and says it came from the gateway (blocked_by_inspector, inspector_unavailable, inspector_timeout, inspector_malformed_findings, two_inspectors). Unreadable findings are always a named error, never a pass. The codes and statuses are the lab's own and UNVERIFIED.",
+      "aliases": [
+        "refusal"
+      ]
+    },
+    {
+      "id": "unverified-model",
+      "term": "UNVERIFIED (lab model)",
+      "definition": "Anything the release notes do not say is the lab's own model and is labelled UNVERIFIED: the category names (Model Armor's follow Google's public overview and need re-checking), fail-open or fail-closed, the timeout, what a client receives, whether the response is inspected, and the finding shape.",
+      "aliases": [
+        "lab model"
+      ]
+    }
+  ],
+  "sources": [],
+  "cards": [
+    {
+      "id": "try-clean-prompt-passes",
+      "label": "S01: A harmless prompt passes the inspector",
+      "description": "The gateway inspects the prompt on the way in and the answer on the way out. Neither has a finding, the client gets the answer, and the trace shows the three steps with their lab time.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/clean-prompt-passes"
+      },
+      "terms": [
+        "external-inspector"
+      ],
+      "story": "S01"
+    },
+    {
+      "id": "try-injection-blocked-when-enforcing",
+      "label": "S02: A prompt injection is stopped by the gateway",
+      "description": "The inspector reports a prompt injection finding and the key is enforcing, so the gateway answers with its own named refusal. The model is never called and no tokens are spent.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/injection-blocked-when-enforcing"
+      },
+      "terms": [
+        "external-inspector",
+        "authority-cap"
+      ],
+      "story": "S02"
+    },
+    {
+      "id": "try-sensitive-data-in-prompt",
+      "label": "S03: A card number in the prompt never reaches the model",
+      "description": "The inspector reports sensitive data and the enforcing key blocks the call. The number is masked everywhere the lab shows the prompt, and the model is not called.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/sensitive-data-in-prompt"
+      },
+      "terms": [
+        "external-inspector",
+        "authority-cap"
+      ],
+      "story": "S03"
+    },
+    {
+      "id": "try-sensitive-data-in-response",
+      "label": "S04: A card number in the model's answer is caught on the way out",
+      "description": "The response inspection finds the sensitive data and the gateway withholds the answer. The model had already answered, so the tokens are spent: a response block costs what the call cost.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/sensitive-data-in-response"
+      },
+      "terms": [
+        "external-inspector"
+      ],
+      "story": "S04"
+    },
+    {
+      "id": "try-malicious-url-blocked",
+      "label": "S05: A link on the stub's list is blocked",
+      "description": "The inspector reports a malicious URL finding and the enforcing key blocks the call. The list is the lab's own, made of reserved .invalid names, and says nothing about real threat intelligence.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/malicious-url-blocked"
+      },
+      "terms": [
+        "external-inspector"
+      ],
+      "story": "S05"
+    },
+    {
+      "id": "try-advisory-logs-then-enforcing-blocks",
+      "label": "S06: Advisory authority logs the finding; enforcing blocks it again",
+      "description": "The authority cap holds the inspector advisory: the same finding is written to the gateway log and the call goes through. Switching the key back to enforcing blocks the very same prompt.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/advisory-logs-then-enforcing-blocks"
+      },
+      "terms": [
+        "authority-cap",
+        "unverified-model"
+      ],
+      "story": "S06"
+    },
+    {
+      "id": "try-inspector-unreachable-closed-vs-open",
+      "label": "S07: The inspector is down: fail closed blocks, fail open lets it through",
+      "description": "With fail closed even a harmless prompt is blocked with a named error. With fail open the call goes through and the gateway log says it failed open. Whether the product offers both is not known.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/inspector-unreachable-closed-vs-open"
+      },
+      "terms": [
+        "fail-open-closed",
+        "unverified-model"
+      ],
+      "story": "S07"
+    },
+    {
+      "id": "try-slow-inspector-times-out",
+      "label": "S08: A slow inspector hits its timeout",
+      "description": "The gateway gives up at the key's timeout on the lab clock. It is a timeout, not a finding: closed blocks the call, open lets it through, whatever the prompt holds.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/slow-inspector-times-out"
+      },
+      "terms": [
+        "fail-open-closed",
+        "unverified-model"
+      ],
+      "story": "S08"
+    },
+    {
+      "id": "try-malformed-findings-named-error",
+      "label": "S09: Unreadable findings are a named error, never a pass",
+      "description": "The gateway returns the named error inspector_malformed_findings and does not call the model. Neither fail open nor advisory authority turns it into a pass.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/malformed-findings-named-error"
+      },
+      "terms": [
+        "named-error",
+        "unverified-model"
+      ],
+      "story": "S09"
+    },
+    {
+      "id": "try-second-inspector-replaces-first",
+      "label": "S10: A second inspector replaces the first",
+      "description": "Selecting the second inspector replaces the first and says which one went. The same prompt now comes back with the second inspector's own category names.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/second-inspector-replaces-first"
+      },
+      "terms": [
+        "external-inspector"
+      ],
+      "story": "S10"
+    },
+    {
+      "id": "try-two-inspectors-refused",
+      "label": "S11: Two inspectors at once are refused",
+      "description": "The request is refused with the named error two_inspectors and the key keeps what it had: the next prompt is still inspected by the first inspector.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#inspector/two-inspectors-refused"
+      },
+      "terms": [
+        "external-inspector",
+        "named-error"
+      ],
+      "story": "S11"
+    },
+    {
+      "id": "concept-limits",
+      "label": "What is sourced and what is the lab's model",
+      "description": "The release-notes claims, the lab's own model and the list of what is UNVERIFIED.",
+      "group": "concept",
+      "action": {
+        "type": "route",
+        "href": "/#limits"
+      },
+      "terms": [
+        "unverified-model"
+      ]
+    },
+    {
+      "id": "ref-doctor",
+      "label": "Doctor and health",
+      "description": "Preflight checks and the demo-health/1 endpoint.",
+      "group": "setup",
+      "action": {
+        "type": "route",
+        "href": "/api/health"
+      }
+    }
+  ],
+  "diagrams": [
+    {
+      "id": "model-armor-inspector",
+      "label": "External inspector in AI Guard: enforcing or advisory",
+      "href": "/#diagram",
+      "mode": "mock"
+    }
+  ],
+  "stories": [
+    {
+      "id": "S01",
+      "title": "A harmless prompt passes the inspector",
+      "say": "The gateway inspects the prompt on the way in and the answer on the way out. Neither has a finding, the client gets the answer, and the trace shows the three steps with their lab time.",
+      "file": "server/src/data/stories/S01-clean-prompt-passes.json"
+    },
+    {
+      "id": "S02",
+      "title": "A prompt injection is stopped by the gateway",
+      "say": "The inspector reports a prompt injection finding and the key is enforcing, so the gateway answers with its own named refusal. The model is never called and no tokens are spent.",
+      "file": "server/src/data/stories/S02-injection-blocked-when-enforcing.json"
+    },
+    {
+      "id": "S03",
+      "title": "A card number in the prompt never reaches the model",
+      "say": "The inspector reports sensitive data and the enforcing key blocks the call. The number is masked everywhere the lab shows the prompt, and the model is not called.",
+      "file": "server/src/data/stories/S03-sensitive-data-in-prompt.json"
+    },
+    {
+      "id": "S04",
+      "title": "A card number in the model's answer is caught on the way out",
+      "say": "The response inspection finds the sensitive data and the gateway withholds the answer. The model had already answered, so the tokens are spent: a response block costs what the call cost.",
+      "file": "server/src/data/stories/S04-sensitive-data-in-response.json"
+    },
+    {
+      "id": "S05",
+      "title": "A link on the stub's list is blocked",
+      "say": "The inspector reports a malicious URL finding and the enforcing key blocks the call. The list is the lab's own, made of reserved .invalid names, and says nothing about real threat intelligence.",
+      "file": "server/src/data/stories/S05-malicious-url-blocked.json"
+    },
+    {
+      "id": "S06",
+      "title": "Advisory authority logs the finding; enforcing blocks it again",
+      "say": "The authority cap holds the inspector advisory: the same finding is written to the gateway log and the call goes through. Switching the key back to enforcing blocks the very same prompt.",
+      "file": "server/src/data/stories/S06-advisory-logs-then-enforcing-blocks.json"
+    },
+    {
+      "id": "S07",
+      "title": "The inspector is down: fail closed blocks, fail open lets it through",
+      "say": "With fail closed even a harmless prompt is blocked with a named error. With fail open the call goes through and the gateway log says it failed open. Whether the product offers both is not known.",
+      "file": "server/src/data/stories/S07-inspector-unreachable-closed-vs-open.json"
+    },
+    {
+      "id": "S08",
+      "title": "A slow inspector hits its timeout",
+      "say": "The gateway gives up at the key's timeout on the lab clock. It is a timeout, not a finding: closed blocks the call, open lets it through, whatever the prompt holds.",
+      "file": "server/src/data/stories/S08-slow-inspector-times-out.json"
+    },
+    {
+      "id": "S09",
+      "title": "Unreadable findings are a named error, never a pass",
+      "say": "The gateway returns the named error inspector_malformed_findings and does not call the model. Neither fail open nor advisory authority turns it into a pass.",
+      "file": "server/src/data/stories/S09-malformed-findings-named-error.json"
+    },
+    {
+      "id": "S10",
+      "title": "A second inspector replaces the first",
+      "say": "Selecting the second inspector replaces the first and says which one went. The same prompt now comes back with the second inspector's own category names.",
+      "file": "server/src/data/stories/S10-second-inspector-replaces-first.json"
+    },
+    {
+      "id": "S11",
+      "title": "Two inspectors at once are refused",
+      "say": "The request is refused with the named error two_inspectors and the key keeps what it had: the next prompt is still inspected by the first inspector.",
+      "file": "server/src/data/stories/S11-two-inspectors-refused.json"
+    }
+  ]
+}

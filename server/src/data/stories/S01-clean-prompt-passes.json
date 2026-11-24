@@ -1,0 +1,8 @@
+{
+  "id": "S01",
+  "scenario": "clean-prompt-passes",
+  "title": "A harmless prompt passes the inspector",
+  "goal": "For {{castBrand}}, {{castApp}} keeps working while it is {{castTask}}, with an inspector on {{castKey}}.",
+  "obstacle": "The key has an external inspector, and a clean request must not be slowed down or turned away by it.",
+  "control": "The gateway inspects the prompt on the way in and the answer on the way out. Neither has a finding, the client gets the answer, and the trace shows the three steps with their lab time."
+}

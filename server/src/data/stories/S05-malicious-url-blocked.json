@@ -1,0 +1,8 @@
+{
+  "id": "S05",
+  "scenario": "malicious-url-blocked",
+  "title": "A link on the stub's list is blocked",
+  "goal": "Known-bad links must stay away from {{castApp}} while it is {{castTask}}: {{castOwner}} asked for that.",
+  "obstacle": "A prompt carries a link to a host that the inspector's list marks as malicious.",
+  "control": "The inspector reports a malicious URL finding and the enforcing key blocks the call. The list is the lab's own, made of reserved .invalid names, and says nothing about real threat intelligence."
+}

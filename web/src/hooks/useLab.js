@@ -1,0 +1,97 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { clearScenarioHash } from "../nav.js";
+import { markWorkspaceUnused, onWorkspaceForgotten } from "../workspace.js";
+import { getInfo, getObservability, getStory, postReset, postRun, postScenario, setMode } from "../api";
+
+const say = (r, what) => r.body?.message || `${what} failed (HTTP ${r.status})`;
+
+/**
+ * The lab's one data hook. It holds the info (source, realAvailable, the banner), the story and talk track for the picked vertical, and the last run
+ * (so a visitor can leave the Inspector page and come back to it) with the record the run left behind. The vertical starts as null: the first load sends
+ * NO vertical, so the server answers with the configured customer vertical and cast (a default here would turn "none" into "retail" and hide them). `switchMode` is the rule 19 toggle: POST
+ * /api/mode with exactly { source }, then every piece of data is loaded again. `epoch` goes up on a switch, a Reset or a new vertical so a page starts over.
+ */
+export default function useLab() {
+  const [vertical, setVerticalState] = useState(null);
+  const [info, setInfo] = useState(null);
+  const [story, setStory] = useState(null);
+  const [error, setError] = useState(null);
+  const [modeError, setModeError] = useState(null);
+  const [last, setLast] = useState(null); // { kind: "live" | "scenario", result, scenario?, runId, trace } or null before any run
+  const [obs, setObs] = useState(null); // the run-observability answer for the last run
+  const [busy, setBusy] = useState(false);
+  const [forgotten, setForgotten] = useState(false); // the server forgot this tab's workspace (see workspace.js)
+  const [epoch, setEpoch] = useState(0);
+  const seq = useRef(0);
+  const verticalRef = useRef(vertical); // the forgotten-workspace handler reads the CURRENT vertical without re-subscribing on every change
+  useEffect(() => { verticalRef.current = vertical; }, [vertical]);
+
+  const load = useCallback(async (v) => {
+    const mine = ++seq.current; // a late answer for a vertical or a mode the visitor has left is dropped
+    const [i, s] = await Promise.all([getInfo(), getStory(v)]);
+    if (mine !== seq.current) return;
+    const bad = [i, s].find((r) => !r.ok);
+    if (bad) { setError(say(bad, "Loading the lab")); return; }
+    setError(null); setInfo(i.body); setStory(s.body);
+    if (s.body.vertical && s.body.vertical !== v) setVerticalState(s.body.vertical); // the configured vertical wins on the first load
+  }, []);
+
+  useEffect(() => { load(undefined); }, [load]);
+  // The server made a new lab for an id this tab had already used: what the page showed is gone. Say so, drop the stale result and load everything again.
+  // Subscribed once: the handler reads the vertical through a ref, so switching verticals does not tear the subscription down and put it back.
+  useEffect(() => onWorkspaceForgotten(() => { clearScenarioHash(); setForgotten(true); setLast(null); setObs(null); setEpoch((n) => n + 1); load(verticalRef.current ?? undefined); }), [load]);
+  const setVertical = useCallback((v) => { clearScenarioHash(); setVerticalState(v); setEpoch((n) => n + 1); load(v); }, [load]);
+
+  // Rule 19: the server decides. A 409 (Real not available) is shown as the server worded it; nothing else changes.
+  const switchMode = useCallback(async (source) => {
+    if (source === info?.source) return { ok: true, unchanged: true }; // pressing the mode that is already active changes nothing: no request, no reload, no lost run
+    const r = await setMode(source);
+    if (!r.ok) { setModeError(r.body?.message || `The mode did not change (HTTP ${r.status})`); return { ok: false, message: r.body?.message }; }
+    clearScenarioHash(); setModeError(null); setLast(null); setObs(null); setEpoch((n) => n + 1);
+    await load(vertical ?? undefined);
+    return { ok: true };
+  }, [load, vertical, info]);
+
+  const refreshObs = useCallback(async () => {
+    const r = await getObservability();
+    setObs(r.ok ? r.body : { record: { error: r.body?.error || "run_observability_failed", message: r.body?.message || `HTTP ${r.status}` }, streams: [] });
+  }, []);
+
+  // A run is data, a refusal included. Only a transport or validation failure (4xx/5xx) is returned as { ok: false } for the page to show.
+  const runLive = useCallback(async (prompt) => {
+    setBusy(true);
+    try {
+      const r = await postRun(prompt);
+      if (!r.ok) return { ok: false, status: r.status, message: say(r, "The run"), code: r.body?.error };
+      const { runId, trace, ...result } = r.body;
+      setLast({ kind: "live", result, runId, trace });
+      await refreshObs();
+      return { ok: true };
+    } finally { setBusy(false); }
+  }, [refreshObs]);
+
+  const runScenario = useCallback(async (id) => {
+    setBusy(true);
+    try {
+      const r = await postScenario(id);
+      if (!r.ok) return { ok: false, status: r.status, message: say(r, "The scenario"), code: r.body?.error };
+      const { runId, ...scenario } = r.body;
+      setLast({ kind: "scenario", id, scenario, runId });
+      await refreshObs();
+      return { ok: true };
+    } finally { setBusy(false); }
+  }, [refreshObs]);
+
+  const reset = useCallback(async () => {
+    // The next call after a Reset meets a new workspace on purpose: that is not a forgotten one. The used mark is cleared BEFORE the request goes out, so no answer
+    // can arrive and find it set; if the Reset fails the server still has the workspace and the next ordinary answer marks the id used again.
+    markWorkspaceUnused();
+    const r = await postReset();
+    clearScenarioHash(); // the address may still name a scenario: Reset takes it out, so the page that opens again does not run it again
+    setForgotten(false); setLast(null); setObs(null); setEpoch((n) => n + 1);
+    await load(vertical ?? undefined);
+    return r.ok;
+  }, [load, vertical]);
+
+  return { vertical, setVertical, info, story, source: info?.source || null, error, modeError, forgotten, dismissForgotten: () => setForgotten(false), last, obs, busy, epoch, reload: () => load(vertical ?? undefined), switchMode, runLive, runScenario, reset };
+}

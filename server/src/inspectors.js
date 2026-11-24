@@ -47,8 +47,10 @@ const sensitive = (text) => {
 };
 const badUrl = (text) => {
   let n = 0;
-  for (const m of String(text).matchAll(/\bhttps?:\/\/([^\s/?#"'`<>\\)]{1,253})/gi)) {
-    const host = m[1].replace(/:\d+$/, '').replace(/^[^@]*@/, '');
+  // The host ends at a space, a path, a query, a quote or a closing bracket, or a comma or semicolon. Punctuation that ends a SENTENCE (". , ; : ! ?") is not part of
+  // the name, and neither is the trailing dot of a fully-qualified name (malware.invalid.): both are stripped before the list is checked.
+  for (const m of normalizeForDetection(String(text)).matchAll(/\bhttps?:\/\/([^\s/?#"'`<>\\)\]},;]{1,253})/gi)) {
+    const host = m[1].replace(/[.,;:!?]+$/, '').replace(/:\d+$/, '').replace(/[.,;:!?]+$/, '').replace(/^[^@]*@/, '');
     if (BAD_HOST.test(host)) n += 1;
   }
   return n ? [`stub URL list matched ${n} link${n > 1 ? 's' : ''}`] : [];
@@ -115,7 +117,8 @@ export function createInspector(id) {
       const findings = [];
       for (const rule of def.rules) {
         const r = rule.run(text);
-        for (const message of r.messages) findings.push({ category: rule.category, severity: r.severity, location: { index: 0 }, messages: [message] });
+        // ONE finding per category: the messages of every rule that matched in it are merged, so one injection prompt is one finding, not one per phrase.
+        if (r.messages.length) findings.push({ category: rule.category, severity: r.severity, location: { index: 0 }, messages: r.messages.slice(0, BOUNDS.maxMessages) });
       }
       return { status: 'ok', latencyMs, raw: { findings } };
     },

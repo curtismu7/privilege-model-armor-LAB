@@ -1,0 +1,8 @@
+{
+  "id": "S09",
+  "scenario": "malformed-findings-named-error",
+  "title": "Unreadable findings are a named error, never a pass",
+  "goal": "{{castBrand}} needs {{castApp}} to fail safely, while it is {{castTask}}, if the inspector sends back something the gateway cannot read.",
+  "obstacle": "An answer that cannot be read could be mistaken for no findings, which would turn a broken inspector into an open door.",
+  "control": "The gateway returns the named error inspector_malformed_findings and does not call the model. Neither fail open nor advisory authority turns it into a pass."
+}

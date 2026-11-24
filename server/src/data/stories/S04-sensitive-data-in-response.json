@@ -1,0 +1,8 @@
+{
+  "id": "S04",
+  "scenario": "sensitive-data-in-response",
+  "title": "A card number in the model's answer is caught on the way out",
+  "goal": "{{castBrand}} needs the answers {{castApp}} gives while it is {{castTask}} to be inspected too, not only the questions.",
+  "obstacle": "The prompt is harmless but the model answers with a card number. Inspecting only the prompt would let it through.",
+  "control": "The response inspection finds the sensitive data and the gateway withholds the answer. The model had already answered, so the tokens are spent: a response block costs what the call cost."
+}

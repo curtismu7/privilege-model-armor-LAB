@@ -1,0 +1,8 @@
+{
+  "id": "S10",
+  "scenario": "second-inspector-replaces-first",
+  "title": "A second inspector replaces the first",
+  "goal": "Another inspector is to be tried on {{castKey}}, at {{castOwner}}'s request, while {{castApp}} is {{castTask}}.",
+  "obstacle": "A key has one external inspector. Adding another must not leave two half-configured.",
+  "control": "Selecting the second inspector replaces the first and says which one went. The same prompt now comes back with the second inspector's own category names."
+}

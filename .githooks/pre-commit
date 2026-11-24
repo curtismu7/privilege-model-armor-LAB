@@ -3,4 +3,4 @@
 if command -v gitleaks >/dev/null 2>&1; then
   exec gitleaks protect --staged --redact
 fi
-echo "pre-commit: gitleaks not installed (brew install gitleaks); there is no CI, so run gitleaks by hand before sharing." >&2
+echo "pre-commit: gitleaks not installed (brew install gitleaks); CI scans every push, but install it so a secret is caught before it leaves your machine." >&2
