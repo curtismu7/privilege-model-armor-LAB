@@ -1,0 +1,21 @@
+{
+  "name": "privilege-model-armor-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Privilege Model Armor LAB: one external inspector per LLM key (Model Armor, with Azure AI Content Safety and Bedrock Guardrails stubs), the authority cap that holds it advisory, and fail-open or fail-closed when it is unreachable, all on a lab clock. Mock only; everything beyond the 2026-11-21 release notes is UNVERIFIED (lab model). Fork of ai-guard-sidecar-LAB.",
+  "license": "MIT",
+  "workspaces": [
+    "server"
+  ],
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "start": "npm start -w server",
+    "test": "npm test -w server",
+    "doctor": "node scripts/doctor.mjs",
+    "reset": "node scripts/reset.mjs",
+    "prepare": "git config core.hooksPath .githooks || true"
+  }
+}
