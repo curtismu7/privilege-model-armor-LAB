@@ -12,7 +12,7 @@ services:
     environment:
       PORT: "7846"
       PMA_BIND: 0.0.0.0
-      LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-}
+      LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-local.ping-devops.com,privilege-model-armor-lab.local.ping-devops.com}
     read_only: true
     # Optional branding and vocabulary (rule 12). The root file system is read-only, so the file is a read-only bind mount: copy customer.config.example.json to
     # customer.config.json beside this file, edit it, then uncomment the next two lines. (Left commented on purpose: a bind mount of a missing file makes Docker

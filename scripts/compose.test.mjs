@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
-import { portProblem } from '../server/src/safety.js';
+import { allowedExtraHosts, portProblem } from '../server/src/safety.js';
 
 // Every published port must be bound to loopback on the host. A small line parser (no YAML dependency).
 export function publishedPorts(text) {
@@ -94,4 +94,10 @@ test('customer.config.json can be mounted: compose documents the read-only bind 
   assert.match(compose, /customer\.config\.json:\/app\/customer\.config\.json:ro/);
   assert.match(compose, /customer\.config\.example\.json/);
   assert.match(here('README.md'), /customer\.config\.json:\/app\/customer\.config\.json:ro/);
+});
+
+test('LAB_ALLOWED_HOSTS defaults to the lab-proxy names (behind the shared lab-proxy an empty default answers 421), every one a valid host name', () => {
+  const def = /LAB_ALLOWED_HOSTS: \$\{LAB_ALLOWED_HOSTS:-([^}]*)\}/.exec(here('docker-compose.yml'))[1].split(',');
+  assert.ok(def.includes('local.ping-devops.com') && def.includes('privilege-model-armor-lab.local.ping-devops.com'), `default is ${JSON.stringify(def)}`);
+  assert.equal(allowedExtraHosts({ LAB_ALLOWED_HOSTS: def.join(',') }).size, 2);
 });
