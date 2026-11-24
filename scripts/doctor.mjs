@@ -52,10 +52,10 @@ try {
 
 report(guard.attempts.length === 0 ? 'pass' : 'fail', 'zero-outbound', `${guard.attempts.length} real outbound attempts during the doctor run`);
 
-const port = Number(process.env.PORT) || 7839;
+const port = Number(process.env.PORT) || 7846;
 await new Promise((resolve) => {
   const s = net.createServer();
   s.once('error', (e) => { report('fail', 'port-free', `${port} is not free (${e.code})`); resolve(); });
-  s.listen(port, '127.0.0.1', () => s.close(() => { report('pass', 'port-free', `${port} is free (7839 is claimed provisionally; not yet on the shelf registry)`); resolve(); }));
+  s.listen(port, '127.0.0.1', () => s.close(() => { report('pass', 'port-free', `${port} is free (7846 is claimed provisionally; not yet on the shelf registry)`); resolve(); }));
 });
 process.exit(failed ? 1 : 0);

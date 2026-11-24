@@ -7,7 +7,7 @@
     "id": "privilege-model-armor-lab",
     "name": "Privilege Model Armor LAB",
     "catalog": "D000",
-    "baseUrl": "http://localhost:7839",
+    "baseUrl": "http://localhost:7846",
     "doctor": "/api/health",
     "tags": [
       "llm",

@@ -21,7 +21,7 @@ export function buildPack() {
     id: 'privilege-model-armor-lab',
     title: 'Privilege Model Armor LAB',
     version,
-    demo: { id: 'privilege-model-armor-lab', name: 'Privilege Model Armor LAB', catalog: 'D000', baseUrl: 'http://localhost:7839', doctor: '/api/health', tags: ['llm', 'inspector', 'ai-guard', 'privilege', 'simulated', 'mock-only'] },
+    demo: { id: 'privilege-model-armor-lab', name: 'Privilege Model Armor LAB', catalog: 'D000', baseUrl: 'http://localhost:7846', doctor: '/api/health', tags: ['llm', 'inspector', 'ai-guard', 'privilege', 'simulated', 'mock-only'] },
     glossary: [
       { id: 'external-inspector', term: 'External inspector', definition: 'An LLM key can use one external inspector in AI Guard; the lab models Model Armor first, with Azure AI Content Safety and Bedrock Guardrails as stub alternatives. A key has one: selecting another replaces the first. The lab\'s inspectors are stubs with fixed rules and say nothing about any vendor\'s detection.', aliases: ['Model Armor', 'inspector'] },
       { id: 'authority-cap', term: 'Authority cap', definition: 'The authority setting decides whether the inspector\'s findings enforce or only advise. Enforcing: a finding blocks the call. Advisory: the same finding is logged and the call goes through. The cap existing is from the 2026-11-21 release notes; what a blocked or logged call looks like is the lab\'s own model.', aliases: ['advisory', 'enforcing'] },

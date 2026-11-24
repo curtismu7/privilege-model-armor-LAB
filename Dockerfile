@@ -10,7 +10,7 @@ RUN npm run build -w web
 
 FROM node:26-alpine
 WORKDIR /app
-ENV NODE_ENV=production PORT=7839
+ENV NODE_ENV=production PORT=7846
 COPY package.json package-lock.json ./
 COPY web/package.json web/
 COPY server/package.json server/
@@ -20,7 +20,7 @@ COPY server/diagrams server/diagrams
 COPY docs/talk-track.md docs/talk-track.md
 COPY --from=build /app/web/dist web/dist
 USER node
-EXPOSE 7839
+EXPOSE 7846
 # Inside the container the server must listen on all interfaces, so PMA_BIND is set here on purpose.
 # The compose file publishes the port on 127.0.0.1 only; do not publish it more widely.
 ENV PMA_BIND=0.0.0.0

@@ -1,6 +1,6 @@
-# OrbStack:  HOST_PORT=7839 docker compose up --build -d   ->  http://127.0.0.1:7839
+# OrbStack:  HOST_PORT=7846 docker compose up --build -d   ->  http://127.0.0.1:7846
 # The server binds 0.0.0.0 INSIDE the container (PMA_BIND is the opt-in), but the port is published on loopback only.
-# Do not change the 127.0.0.1 below. 7839 is PROVISIONAL (not claimed on the board yet); HOST_PORT stays in 7800-7999.
+# Do not change the 127.0.0.1 below. 7846 is PROVISIONAL (not claimed on the board yet); HOST_PORT stays in 7800-7999.
 name: privilege-model-armor-lab
 
 services:
@@ -8,9 +8,9 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${HOST_PORT:-7839}:7839"
+      - "127.0.0.1:${HOST_PORT:-7846}:7846"
     environment:
-      PORT: "7839"
+      PORT: "7846"
       PMA_BIND: 0.0.0.0
       LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-}
     read_only: true
@@ -22,7 +22,7 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7839/api/health').then(r=>r.json()).then(j=>process.exit(j.schema==='demo-health/1'&&j.state==='ready'?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7846/api/health').then(r=>r.json()).then(j=>process.exit(j.schema==='demo-health/1'&&j.state==='ready'?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       start_period: 5s
       start_interval: 2s

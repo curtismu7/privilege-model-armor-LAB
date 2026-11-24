@@ -4,7 +4,7 @@
 
 **Fork of ai-guard-sidecar-LAB** (a lab on the guardrail sidecar contract, with a stand-in detector, a mock gateway and a fault injector). This lab keeps from it only `sanitize.js`, `fold.js` and `pii.js` (hidden-character handling and PII patterns with check digits) and the shape of its `/inspect` findings (`category`, `severity`, `location`, `messages`), **as that lab describes it: UNVERIFIED against any product**.
 
-What changed from the source: new app id, name, port (7839, provisional) and license text; its sidecar, rules, secrets and tests were removed, and its web UI, Docker files, content pack, shelf entry and workspaces were replaced by new ones for this lab (the page layout follows the family UI standard; no identifier, test or story of the source is kept); the engine is new: three stub inspectors (Model Armor, Azure AI Content Safety, Bedrock Guardrails), a key that holds at most one of them with an authority cap and fail-open or fail-closed, a guard path (prompt, model stub, response) with the gateway's own named refusals, and eleven scenarios as data.
+What changed from the source: new app id, name, port (7846, provisional) and license text; its sidecar, rules, secrets and tests were removed, and its web UI, Docker files, content pack, shelf entry and workspaces were replaced by new ones for this lab (the page layout follows the family UI standard; no identifier, test or story of the source is kept); the engine is new: three stub inspectors (Model Armor, Azure AI Content Safety, Bedrock Guardrails), a key that holds at most one of them with an authority cap and fail-open or fail-closed, a guard path (prompt, model stub, response) with the gateway's own named refusals, and eleven scenarios as data.
 
 ## What the lab shows
 One **external inspector per key**, and the **authority cap**: `enforcing` blocks on a finding, `advisory` logs the same finding and lets the call through; switching back blocks again. Plus what the key does when the inspector is unreachable or too slow (`failMode` closed or open), and that unreadable findings are a named error, never a pass.
@@ -19,14 +19,14 @@ Everything. The inspectors are lab stubs with deterministic rules: no Google Clo
 ```sh
 npm install
 npm run build        # the web page, into web/dist (the API serves it)
-npm start            # http://127.0.0.1:7839/ (page) and /api/ (loopback only)
+npm start            # http://127.0.0.1:7846/ (page) and /api/ (loopback only)
 ./scripts/run.sh     # install, build, doctor and start in one go
 npm test             # server (node --test), web (vitest) and the repo scripts
 npm run doctor       # preflight: every scenario, stories, diagram, netguard self-test, an HTTP pass, port free
 npm run reset        # POST /api/reset on a running lab
 npm run content-pack # rebuild and validate content-pack.json (Learning Hub)
 ```
-Docker (OrbStack): `HOST_PORT=7839 docker compose up --build -d` then http://127.0.0.1:7839 (published on loopback only; the image runs as the non-root `node` user with a read-only file system and no capabilities).
+Docker (OrbStack): `HOST_PORT=7846 docker compose up --build -d` then http://127.0.0.1:7846 (published on loopback only; the image runs as the non-root `node` user with a read-only file system and no capabilities).
 Branding (rule 12): copy `customer.config.example.json` to `customer.config.json` (git-ignored). Host-run it is read from beside `package.json`; in Docker the root file system is read-only, so mount it by uncommenting the `volumes` lines in `docker-compose.yml` (`./customer.config.json:/app/customer.config.json:ro`).
 Node 26. Heavy work on the Air: `air-test . -- npm test` (`git add` new files first).
 
@@ -36,7 +36,7 @@ API (all under `/api/`): `GET health` (demo-health/1), `GET info`, `POST mode` (
 Four pages, each with the simulation banner first and a Mock / Real toggle in the header (Real is disabled with the plain reason): **Inspector** (the lesson pair, the 11 scenarios, the key panel, your own prompt, then the verdict, findings with categories, the call path, GatewayTrace, what the run left behind and the raw JSON), **Diagram** (`model-armor-inspector` loaded by name from diagram-studio data, movable boxes, Simulate, speed, Reset), **Stories and talk track** (11 stories as data with `{{cast}}` tokens, three vertical packs, `docs/talk-track.md`) and **Limits (UNVERIFIED)**. Presenter mode: the header button or the P key.
 
 ## Port
-**7839 is claimed provisionally** for this lab (the repo exists), but the board, the shelf registry and the lab proxy do not know it yet. `PORT` overrides it for local use. The real port and the catalog id come from the owner's claim step (`npm run ports -- --next` in demo-shelf-LAB); `docs/shelf-entry.json` carries a placeholder catalog id.
+**7846 is claimed provisionally** for this lab (the repo exists) (7839 to 7843 belong to the ap-* labs), but the board, the shelf registry and the lab proxy do not know it yet. `PORT` overrides it for local use. The real port and the catalog id come from the owner's claim step (`npm run ports -- --next` in demo-shelf-LAB); `docs/shelf-entry.json` carries a placeholder catalog id.
 
 ## Mock and Real
 Mock only. `GET /api/info` reports `source: "mock"`, `realAvailable: false` with the reason; `POST /api/mode` to `real` or `live` is answered 409 with that reason. Real would be owner-run and read-only, needs a tenant running the 2026-11-21 release and a Google Cloud project, and is not built.

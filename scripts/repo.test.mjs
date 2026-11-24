@@ -16,7 +16,7 @@ test('the files the standalone rules ask for are present', () => {
 // The shelf's tag taxonomy at the time of writing (demo-shelf-LAB data/tags.json). A snapshot, so the test is portable; when a sibling demo-shelf-LAB clone exists it is checked too.
 const SHELF_TAGS = ['pingone', 'pingid', 'pingone-authorize', 'pingone-protect', 'pingone-davinci', 'pingone-privilege', 'agent-gateway', 'pingone-mcp', 'pingfederate', 'pinggateway', 'ai-agent-security', 'mcp-security', 'tool-poisoning', 'agent-identity', 'authorization-policy', 'human-in-the-loop', 'agent-controls', 'sign-in-and-mfa', 'token-security', 'audit-observability', 'learning', 'workload-identity', 'federation', 'jwt', 'jwks', 'pass-agent-token', 'poc-patterns', 'simulated', 'real', 'oauth', 'oidc', 'token-exchange', 'id-jag', 'dpop', 'mtls', 'par', 'ciba', 'step-up', 'rfc9728', 'fapi', 'mcp', 'a2a', 'cimd', 'cedar', 'mcp-server-built', 'aws', 'aws-agentcore', 'aws-bedrock'];
 
-test('the shelf entry is valid and portable: the registry\'s field rules, port 7839 (provisional), a placeholder catalog id, a relative composeFile, tags from the taxonomy', () => {
+test('the shelf entry is valid and portable: the registry\'s field rules, port 7846 (provisional), a placeholder catalog id, a relative composeFile, tags from the taxonomy', () => {
   const doc = JSON.parse(read('docs/shelf-entry.json'));
   assert.equal(doc.demos.length, 1);
   const e = doc.demos[0];
@@ -25,7 +25,7 @@ test('the shelf entry is valid and portable: the registry\'s field rules, port 7
   assert.ok(e.description.length > 0 && e.description.length <= 300, `description is ${e.description.length} characters`);
   assert.equal(e.kind, 'Demo');
   assert.equal(e.healthPath, '/api/health');
-  assert.equal(e.url, 'http://localhost:7839');
+  assert.equal(e.url, 'http://localhost:7846');
   assert.match(e.catalogId, /^D\d+$/);
   assert.equal(e.catalogId, 'D000', 'a placeholder: the owner assigns the real catalog id and port before the registry PR');
   assert.deepEqual(e.pingProducts, []);
@@ -76,7 +76,7 @@ test('the root package builds the web workspace and runs every test suite', () =
 test('the README says it is a Demo, names the provisional port and where the run leaves logs (rule 27)', () => {
   const readme = read('README.md');
   assert.match(readme, /Tier: Demo/);
-  assert.match(readme, /7839/);
+  assert.match(readme, /7846/);
   assert.match(readme, /Observability/i);
   assert.match(readme, /stdout|standard output/i);
 });

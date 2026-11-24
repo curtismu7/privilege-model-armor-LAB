@@ -91,7 +91,7 @@ test('the attribution check script passes in a git checkout', { skip: !fs.exists
 test('the CI workflow runs build, test with the UI-standard check, doctor on the provisional port with the content pack, forbidden-strings and gitleaks', () => {
   const ci = fs.readFileSync(path.join(REPO_ROOT, '.github/workflows/ci.yml'), 'utf8');
   for (const job of ['build:', 'test:', 'doctor:', 'forbidden-strings:', 'gitleaks:']) assert.ok(ci.includes(`\n  ${job}`), job);
-  assert.match(ci, /PORT=7839 npm run doctor/);
+  assert.match(ci, /PORT=7846 npm run doctor/);
   assert.match(ci, /run: npm run build/);
   assert.match(ci, /run: bash scripts\/check-ui-standard\.sh/);
   assert.match(ci, /validate-content-pack\.mjs/);

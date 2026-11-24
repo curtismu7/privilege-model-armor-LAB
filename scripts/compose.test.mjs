@@ -22,29 +22,29 @@ const here = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 
 test('docker-compose.yml publishes only on 127.0.0.1', () => {
   const ports = publishedPorts(here('docker-compose.yml'));
-  assert.deepEqual(ports, ['127.0.0.1:${HOST_PORT:-7839}:7839']);
+  assert.deepEqual(ports, ['127.0.0.1:${HOST_PORT:-7846}:7846']);
   for (const p of ports) assert.match(p, /^127\.0\.0\.1:/, `${p} must start with 127.0.0.1:`);
 });
 
 test('the parser flags an unbound or wildcard publish', () => {
-  for (const bad of ['- "7839:7839"', '- "0.0.0.0:7839:7839"', '- 7839', '- "::1:7839:7839"']) {
+  for (const bad of ['- "7846:7846"', '- "0.0.0.0:7846:7846"', '- 7846', '- "::1:7846:7846"']) {
     const ports = publishedPorts(`services:\n  a:\n    ports:\n      ${bad}\n`);
     assert.equal(ports.length, 1);
     assert.doesNotMatch(ports[0], /^127\.0\.0\.1:/);
   }
 });
 
-test('compose default host port and Dockerfile port are allowed ports and agree (7839, provisional)', () => {
+test('compose default host port and Dockerfile port are allowed ports and agree (7846, provisional)', () => {
   const compose = here('docker-compose.yml');
   const host = Number(/\$\{HOST_PORT:-(\d+)\}/.exec(compose)[1]);
-  assert.equal(host, 7839);
+  assert.equal(host, 7846);
   assert.equal(portProblem(host), null);
   const docker = here('Dockerfile');
   const port = Number(/^EXPOSE (\d+)/m.exec(docker)[1]);
-  assert.equal(port, 7839);
+  assert.equal(port, 7846);
   assert.equal(portProblem(port), null);
   assert.match(compose, new RegExp(`:${port}"`));
-  assert.match(compose, /PORT: "7839"/);
+  assert.match(compose, /PORT: "7846"/);
   assert.match(docker, /^ENV PMA_BIND=0\.0\.0\.0$/m);
 });
 
@@ -61,7 +61,7 @@ test('the long-running service restarts unless stopped (rule 21) and has a healt
   assert.match(compose, /^\s+restart: unless-stopped$/m);
   const hc = /healthcheck:[\s\S]*?test: \[(.*)\]/.exec(compose);
   assert.ok(hc, 'a healthcheck is defined');
-  assert.match(hc[1], /127\.0\.0\.1:7839\/api\/health/);
+  assert.match(hc[1], /127\.0\.0\.1:7846\/api\/health/);
   assert.match(hc[1], /demo-health\/1/);
 });
 

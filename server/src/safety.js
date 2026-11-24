@@ -2,7 +2,7 @@
 //  1. Loopback bind only unless PMA_BIND is set on purpose.
 //  2. Host header must be a loopback name or one on LAB_ALLOWED_HOSTS (DNS-rebinding defence): otherwise 421 Misdirected Request.
 //  3. A write must be same-origin and JSON: a cross-origin Origin or cross-site Sec-Fetch-Site is 403, a non-JSON body is 415.
-//  4. The port 7839 is PROVISIONAL (not claimed on the board yet); PORT may override it with any port that is not reserved.
+//  4. The port 7846 is PROVISIONAL (not claimed on the board yet); PORT may override it with any port that is not reserved.
 
 export function isLoopbackHost(host) {
   const h = String(host).toLowerCase().replace(/^\[|\]$/g, '');
@@ -16,7 +16,7 @@ export function assertBindAllowed(host, env = process.env) {
   throw new Error(`refusing to bind ${host}: loopback only. Set PMA_BIND to opt in.`);
 }
 
-export const DEFAULT_PORT = 7839; // PROVISIONAL: not claimed on the board yet
+export const DEFAULT_PORT = 7846; // PROVISIONAL: not claimed on the board yet
 const FORBIDDEN_PORTS = new Set([8080, 5173, 3000, 3900, 4000, 4400, 4510, 4600, 4601, 4840, 18080, 19080, 19090]);
 // Why a PUBLISHED port (compose, Dockerfile) is not allowed, or null: the family's packed range is 7800-7999. (resolvePort stays looser for local use: PORT may be any free port.)
 export function portProblem(port) {
