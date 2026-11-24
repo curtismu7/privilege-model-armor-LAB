@@ -80,8 +80,10 @@ export default function useLab() {
   }, [refreshObs]);
 
   const reset = useCallback(async () => {
+    // The next call after a Reset meets a new workspace on purpose: that is not a forgotten one. The used mark is cleared BEFORE the request goes out, so no answer
+    // can arrive and find it set; if the Reset fails the server still has the workspace and the next ordinary answer marks the id used again.
+    markWorkspaceUnused();
     const r = await postReset();
-    markWorkspaceUnused(); // the next call will meet a new workspace on purpose: that is not a forgotten one
     clearScenarioHash(); // the address may still name a scenario: Reset takes it out, so the page that opens again does not run it again
     setForgotten(false); setLast(null); setObs(null); setEpoch((n) => n + 1);
     await load(vertical ?? undefined);

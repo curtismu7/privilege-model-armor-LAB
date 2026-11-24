@@ -77,6 +77,80 @@ describe("the server forgot this workspace", () => {
   });
 });
 
+describe("the forgotten-workspace detection (client side)", () => {
+  const resp = (status, fresh) => ({ status, ok: status < 400, headers: { get: (k) => (k === "x-workspace-fresh" && fresh ? "1" : null) } });
+  const withFetch = (impl) => { const real = globalThis.fetch; globalThis.fetch = impl; return () => { globalThis.fetch = real; }; };
+  const deferred = () => { let resolve; const p = new Promise((r) => { resolve = r; }); return { p, resolve }; };
+
+  it("(d) parallel first-load calls from a brand-new tab never show the banner, whatever order the answers arrive in", async () => {
+    for (const order of [[0, 1, 2], [2, 1, 0], [1, 0, 2], [1, 2, 0]]) {
+      const t = tabOf(storage(), null);
+      const gates = [deferred(), deferred(), deferred()];
+      let i = 0; const restore = withFetch(() => gates[i++].p);
+      let n = 0; t.onForgotten(() => { n += 1; });
+      try {
+        const calls = [t.fetch("/a"), t.fetch("/b"), t.fetch("/c")]; // the server made the workspace for the FIRST request it handled: gate 0
+        for (const k of order) { gates[k].resolve(resp(200, k === 0)); await calls[k]; }
+        await Promise.all(calls);
+        expect(n, `order ${order}`).toBe(0);
+      } finally { restore(); }
+    }
+  });
+
+  it("(d) and a real eviction is still seen when answers arrive out of order", async () => {
+    const t = tabOf(storage(), null);
+    let fresh = false; const restore = withFetch(async () => resp(200, fresh));
+    let n = 0; t.onForgotten(() => { n += 1; });
+    try {
+      await t.fetch("/a"); // the tab has used its id
+      const gates = [deferred(), deferred()]; let i = 0; restore(); const restore2 = withFetch(() => gates[i++].p);
+      const calls = [t.fetch("/b"), t.fetch("/c")];
+      gates[1].resolve(resp(200, false)); await calls[1];
+      gates[0].resolve(resp(200, true)); await calls[0];
+      expect(n).toBe(1);
+      restore2();
+    } finally { /* restored above */ }
+  });
+
+  it("(c) the answer to the tab's own Reset does not mark the id used again (the workspace it names is gone)", async () => {
+    const t = tabOf(storage(), null);
+    let r = resp(200, false); const restore = withFetch(async () => r);
+    let n = 0; t.onForgotten(() => { n += 1; });
+    try {
+      await t.fetch("/api/info");
+      t.markUnused(); await t.fetch("/api/reset", { method: "POST" });
+      r = resp(200, true); await t.fetch("/api/info"); // the first call after the Reset meets the new workspace on purpose
+      expect(n).toBe(0);
+    } finally { restore(); }
+  });
+
+  it("(e) a refusal (400) that carries the header is still seen", async () => {
+    const t = tabOf(storage(), null);
+    let r = resp(200, false); const restore = withFetch(async () => r);
+    let n = 0; t.onForgotten(() => { n += 1; });
+    try { await t.fetch("/a"); r = resp(400, true); await t.fetch("/a"); expect(n).toBe(1); } finally { restore(); }
+  });
+
+  it("(c) the used mark is cleared before a Reset goes out: the answers that follow, and one still in flight from before it, are not reported", async () => {
+    const t = tabOf(storage(), null);
+    let r = resp(200, false); const restore = withFetch(async () => r);
+    let n = 0; t.onForgotten(() => { n += 1; });
+    try {
+      await t.fetch("/a");
+      const late = deferred(); restore(); const restore2 = withFetch(() => late.p);
+      const inFlight = t.fetch("/slow"); // sent before the Reset
+      t.markUnused(); // the page's own Reset
+      late.resolve(resp(200, true)); await inFlight;
+      expect(n).toBe(0);
+      restore2(); const restore3 = withFetch(async () => resp(200, true));
+      await t.fetch("/after"); expect(n).toBe(0); // the first answer after the Reset is fresh on purpose
+      restore3(); const restore4 = withFetch(async () => resp(200, true));
+      await t.fetch("/again"); expect(n).toBe(1); // but a later one is a real forgetting
+      restore4();
+    } finally { restore(); }
+  });
+});
+
 describe("the page shows it", () => {
   const h = useLabHarness();
   it("when the server has forgotten the tab's workspace, the page says so in plain words, reloads its state and the key is back to the default", async () => {
@@ -91,11 +165,28 @@ describe("the page shows it", () => {
     await h.lab.forgetServerSide();
     await user.click(screen.getByTestId("scenario-injection-blocked-when-enforcing"));
     const note = await screen.findByTestId("workspace-forgotten");
+    // (b) the request that TRIGGERED it keeps its real result; (a) the address no longer names a scenario, so the page that opened again did not run it a second time
+    await waitFor(() => expect(text("verdict-chip")).toBe("BLOCKED"));
+    expect(window.location.hash).toBe("#inspector");
+    expect(h.lab.calls.filter((c) => c.method === "POST" && c.path.startsWith("/api/scenario/"))).toHaveLength(2);
     expect(note).toHaveTextContent(/The server forgot this workspace/);
     expect(note).toHaveTextContent(/reset to its defaults/);
     await waitFor(() => expect(text("key-saved-view")).toMatch(/enforcing/), { timeout: 8000 });
     await user.click(screen.getByTestId("workspace-forgotten-dismiss"));
     expect(screen.queryByTestId("workspace-forgotten")).toBeNull();
+  });
+
+  it("(f) a forgotten workspace noticed by a call that is not a run clears the stale result and observability, and loads the defaults", async () => {
+    const user = await h.mount();
+    await user.click(await screen.findByTestId("scenario-clean-prompt-passes"));
+    await screen.findByTestId("verdict");
+    await h.lab.forgetServerSide();
+    await user.click(screen.getByTestId("key-authority-advisory"));
+    await user.click(screen.getByTestId("key-save"));
+    await screen.findByTestId("workspace-forgotten");
+    await screen.findByTestId("result-empty");
+    expect(screen.getByTestId("ro-empty")).toBeInTheDocument();
+    expect(window.location.hash).toBe("#inspector");
   });
 
   it("the page's own Reset takes the banner away", async () => {

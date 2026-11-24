@@ -10,7 +10,7 @@ import { BOUNDS } from './bounds.js';
 import { runChecks as defaultChecks } from './checks.js';
 import { allPassed } from './doctor.js';
 import { LabError, invalidRequest } from './errors.js';
-import { runGuard } from './guardPath.js';
+import { runGuard, validatePrompt } from './guardPath.js';
 import { createHealth } from './health.js';
 import { INSPECTOR_STATES, describeInspectors } from './inspectors.js';
 import { AUTHORITIES, FAIL_MODES, validateKeyPatch } from './keyInspector.js';
@@ -115,16 +115,20 @@ export function createApp({
   });
 
   app.get('/api/key', (req, res) => res.json(wsOf(req, res).lab.keyInspector.view()));
+  // EVERY route that refuses a request (400, 404, 413) does so BEFORE it finds or creates the workspace: a refused request must create nothing, set no
+  // X-Workspace-Fresh and, at the cap, evict nobody's lab.
   app.put('/api/key', (req, res) => {
-    const { replaced, view } = wsOf(req, res).lab.keyInspector.configure(validateKeyPatch(req.body));
+    const patch = validateKeyPatch(req.body);
+    const { replaced, view } = wsOf(req, res).lab.keyInspector.configure(patch);
     res.json({ ...view, replaced });
   });
 
   app.post('/api/run', (req, res) => {
-    const ws = wsOf(req, res);
     const b = req.body;
     const keys = b && typeof b === 'object' && !Array.isArray(b) ? Object.keys(b) : null;
     if (!keys || keys.length !== 1 || keys[0] !== 'prompt') throw invalidRequest('send exactly { "prompt": "..." }');
+    validatePrompt(b.prompt);
+    const ws = wsOf(req, res);
     const out = runGuard(ws.lab, { prompt: b.prompt });
     ws.lab.record(out);
     const runId = recordRun(ws, { kind: 'live', runs: [{ run: out, label: 'live run' }] });

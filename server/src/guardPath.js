@@ -33,10 +33,15 @@ export function mergeByCategory(found) {
   return [...by.values()];
 }
 
-export function runGuard(lab, { prompt }) {
+// The checks a run's prompt must pass before anything is looked up or created (the API calls this BEFORE it finds or makes the workspace).
+export function validatePrompt(prompt) {
   if (typeof prompt !== 'string') throw invalidRequest('prompt must be a string');
   if (!prompt.trim()) throw invalidRequest('prompt must not be empty');
   if (prompt.length > BOUNDS.maxPromptChars) throw promptTooLarge(BOUNDS.maxPromptChars);
+}
+
+export function runGuard(lab, { prompt }) {
+  validatePrompt(prompt);
 
   const { clock, keyInspector: key, model, llmKey } = lab;
   const t0 = clock.now();

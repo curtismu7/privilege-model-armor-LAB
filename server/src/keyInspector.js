@@ -32,6 +32,7 @@ export function validateKeyPatch(body) {
     if (b.inspectors.length > 1) throw twoInspectors();
     patch.inspector = b.inspectors.length ? id(b.inspectors[0]) : null;
   }
+  if (patch.inspector === null && Object.hasOwn(b, 'inspectorState')) throw invalidKeyConfig('there is no inspector on the key to set a state on'); // decidable from the body alone
   patch.authority = oneOf(b, 'authority', 'key', AUTHORITIES, { optional: true });
   patch.failMode = oneOf(b, 'failMode', 'key', FAIL_MODES, { optional: true });
   patch.inspectorState = oneOf(b, 'inspectorState', 'key', INSPECTOR_STATES, { optional: true });

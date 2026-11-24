@@ -26,6 +26,7 @@ export function createWorkspace({
   let channel = null;
   const token = hex(random().getRandomValues(new Uint8Array(8))); // this load of this tab, never stored
   const listeners = new Set();
+  let generation = 0; // goes up whenever this tab deliberately starts over (its own Reset, a new id): an answer to a request sent before that says nothing about the new state
   const read = (k) => { try { return session().getItem(k); } catch { return null; } };
   const write = (k, v) => { try { session().setItem(k, v); } catch { /* blocked */ } };
   const drop = (k) => { try { session().removeItem(k); } catch { /* blocked */ } };
@@ -40,7 +41,7 @@ export function createWorkspace({
   }
 
   // For tests and for a duplicate: a new tab starts with a new id that no server has seen.
-  function forget() { memo = null; drop(KEY); drop(USED_KEY); }
+  function forget() { memo = null; generation += 1; drop(KEY); drop(USED_KEY); }
 
   // Answers another tab's claim of the id this tab holds.
   const answer = (e) => {
@@ -64,19 +65,26 @@ export function createWorkspace({
   }
 
   // A Reset on this tab's own request makes the next "fresh" answer expected, so it is not reported as a forgotten workspace.
-  const markUnused = () => drop(USED_KEY);
+  const markUnused = () => { generation += 1; drop(USED_KEY); };
   const onForgotten = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
-  function noteFresh(id) {
-    const used = read(USED_KEY) === id;
+  // `usedWhenSent` and `generationWhenSent` are what the tab knew when the REQUEST WENT OUT, never when the answer arrived: parallel first-load calls from a brand-new
+  // tab can be answered in any order, and a non-fresh answer that arrives first must not make the fresh one look like a forgotten workspace.
+  // An answer to a request sent before the tab started over (generation changed) says nothing about the new state: it touches nothing and reports nothing.
+  function noteFresh(id, usedWhenSent, generationWhenSent) {
+    if (generationWhenSent !== generation) return;
     write(USED_KEY, id);
-    if (used) for (const fn of [...listeners]) fn();
+    if (usedWhenSent) for (const fn of [...listeners]) fn();
   }
 
   const fetchWithWorkspace = async (url, opts = {}) => {
     const id = workspaceId();
+    const usedWhenSent = read(USED_KEY) === id;
+    const generationWhenSent = generation;
     const r = await fetch(url, { ...opts, headers: { "content-type": "application/json", ...(opts.headers || {}), "x-workspace": id } });
-    if (r.headers?.get?.("x-workspace-fresh") === "1") noteFresh(id);
-    else if (read(USED_KEY) !== id && r.ok) write(USED_KEY, id);
+    // Any status: a refusal (400) that carried the header still means the server had to make a new workspace.
+    if (r.headers?.get?.("x-workspace-fresh") === "1") noteFresh(id, usedWhenSent, generationWhenSent);
+    // The answer to a Reset proves nothing: the workspace it names has just been thrown away, so it must not mark the id used.
+    else if (r.ok && !/\/api\/reset(\?|$)/.test(String(url)) && generationWhenSent === generation && read(USED_KEY) !== id) write(USED_KEY, id);
     return r;
   };
 

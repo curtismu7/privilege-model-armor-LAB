@@ -124,3 +124,33 @@ test('workspaces are kept in least-recently-USED order: a use moves a workspace 
   ws.get('d');
   assert.ok(!ws.ids().includes('b'), 'b was the least recently used (a peek is not a use)');
 });
+
+test('a REFUSED request creates nothing, sets no X-Workspace-Fresh and evicts nobody, on every route: 21 bad requests on fresh ids at a full cap', async () => {
+  const { createApp, startHttpServer } = await import('../src/app.js');
+  const { validateConfig } = await import('../src/customer.js');
+  const app = createApp({ runChecks: () => [], customer: validateConfig({}), log: () => {}, env: {} });
+  const { server, url } = await startHttpServer({ port: 0, host: '127.0.0.1', app });
+  const base = url.replace(/\/$/, '');
+  const send = (method, p, id, body) => fetch(`${base}${p}`, { method, headers: { 'x-workspace': id, 'content-type': 'application/json', origin: base }, body });
+  try {
+    for (let i = 0; i < MAX_WORKSPACES; i++) assert.equal((await send('GET', '/api/key', `real-${i}`)).status, 200);
+    const before = app.locals.workspaces.ids();
+    const bad = [
+      ['PUT', '/api/key', '{}'], ['PUT', '/api/key', '{"authority":"maybe"}'], ['PUT', '/api/key', '{"inspectors":["model-armor","bedrock-guardrails"]}'], ['PUT', '/api/key', '{"credential":"x"}'],
+      ['PUT', '/api/key', '{"timeoutMs":5}'], ['PUT', '/api/key', '{"inspector":null,"inspectorState":"slow"}'], ['PUT', '/api/key', '[]'], ['PUT', '/api/key', '{bad json'],
+      ['POST', '/api/run', '{}'], ['POST', '/api/run', '{"prompt":""}'], ['POST', '/api/run', '{"prompt":5}'], ['POST', '/api/run', '{"prompt":"a","x":1}'], ['POST', '/api/run', '[]'],
+      ['POST', '/api/run', JSON.stringify({ prompt: 'x'.repeat(20001) })], ['POST', '/api/run', '{bad'], ['POST', '/api/scenario/nope', '{}'], ['POST', '/api/mode', '{"source":"real"}'],
+      ['POST', '/api/mode', '{"source":"moon"}'], ['GET', '/api/nope'], ['GET', '/api/diagram?name=nope'], ['GET', '/api/story?vertical=nope'],
+    ];
+    assert.equal(bad.length, 21);
+    for (const [i, [method, p, body]] of bad.entries()) {
+      const r = await send(method, p, `bad-${i}`, body);
+      assert.ok(r.status >= 400 && r.status < 500, `${method} ${p} ${body} -> ${r.status}`);
+      assert.equal(r.headers.get('x-workspace-fresh'), null, `${method} ${p} ${body}`);
+    }
+    assert.deepEqual(app.locals.workspaces.ids(), before, 'no workspace was created and none evicted');
+    // and a refusal from a workspace that DOES exist is still a refusal, with the workspace unchanged
+    assert.equal((await send('PUT', '/api/key', 'real-0', '{"authority":"maybe"}')).status, 400);
+    assert.deepEqual([...app.locals.workspaces.ids()].sort(), [...before].sort());
+  } finally { await new Promise((res) => server.close(res)); }
+});
