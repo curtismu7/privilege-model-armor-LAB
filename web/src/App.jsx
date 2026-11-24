@@ -95,6 +95,12 @@ export default function App() {
       </header>
       <main className="page">
         <p className="banner" role="note" data-state={source === "real" ? "live" : "mock"} data-testid="banner">{banner}</p>
+        {lab.forgotten && (
+          <div className="reset-note" role="status" data-testid="workspace-forgotten">
+            <p>The server forgot this workspace (it keeps a limited number): the lab was reset to its defaults, and the key and the last result you had are gone.</p>
+            <button type="button" onClick={lab.dismissForgotten} data-testid="workspace-forgotten-dismiss">Dismiss</button>
+          </div>
+        )}
         {lab.modeError && <p className="field-error" role="alert" data-testid="mode-error-banner">{lab.modeError}</p>}
         {lab.error && (
           <div className="field-error" role="alert" data-testid="load-error">

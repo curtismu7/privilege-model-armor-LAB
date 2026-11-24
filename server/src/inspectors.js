@@ -115,7 +115,8 @@ export function createInspector(id) {
       const findings = [];
       for (const rule of def.rules) {
         const r = rule.run(text);
-        for (const message of r.messages) findings.push({ category: rule.category, severity: r.severity, location: { index: 0 }, messages: [message] });
+        // ONE finding per category: the messages of every rule that matched in it are merged, so one injection prompt is one finding, not one per phrase.
+        if (r.messages.length) findings.push({ category: rule.category, severity: r.severity, location: { index: 0 }, messages: r.messages.slice(0, BOUNDS.maxMessages) });
       }
       return { status: 'ok', latencyMs, raw: { findings } };
     },

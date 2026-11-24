@@ -143,7 +143,41 @@ test('lab directives pick a canned reply; an unknown one or a lookalike is just 
   for (const p of ['hi [[lab:reply=nope]]', 'hi [[lab:reply=__proto__]]', 'hi [[lab:reply=constructor]]', 'hi [lab:reply=card]']) {
     const r = run(lab(), p);
     assert.equal(r.outcome, 'passed', p);
-    assert.match(r.response, /answer to: hi/, p);
+    assert.match(r.response, /lab mock answer/, p);
+    assert.doesNotMatch(r.response, /answer to|hi \[/, 'the stub never repeats the prompt');
   }
   assert.match(run(lab(), 'hi [[lab:reply=clean]]').response, /refund window/);
+});
+
+// The engine's own masks keep the last four digits (card, SSN). Take them out; nothing else of the sample may remain, whole or cut short.
+const withoutMasks = (t) => t.replace(/\*{4} \*{4} \*{4} \d{4}/g, '[card mask]').replace(/\*{3}-\*{2}-\d{4}/g, '[ssn mask]').replace(/\b\w\*{3}@[a-z.]+\.example\b/g, '[email mask]');
+
+test('nothing sensitive is ever shown unmasked, whole or cut short: not in the response, the client body, the raw result or the trace, in enforcing, advisory and no-inspector runs', async () => {
+  const { exchangesFor } = await import('../src/runTrace.js');
+  const prompts = ['My card number on file is 4111 1111 1111 1111 thanks', 'Contact sam.lee@mail.example, SSN 078-05-1120, about the refund', `x ${'4111 1111 1111 1111 '.repeat(5)}`];
+  for (const patch of [undefined, { authority: 'advisory' }, { inspector: null }, { authority: 'advisory', failMode: 'open', inspectorState: 'unreachable' }]) {
+    for (const prompt of prompts) {
+      const r = run(lab(patch), prompt);
+      const shown = withoutMasks(JSON.stringify({ r, trace: exchangesFor(r) }));
+      const where = `${JSON.stringify(patch)} / ${prompt.slice(0, 24)}`;
+      for (const re of [/\d{3,4}[ -]\d{4}/, /4111/, /078/, /sam\.lee/, /\d{4}/, /[A-Za-z0-9._-]@/, /\*@/]) assert.doesNotMatch(shown, re, `${where}: ${re}`);
+    }
+  }
+});
+
+test('one injection prompt is one finding (one per category and direction) with its messages merged, and one gateway log entry in advisory', () => {
+  const adv = run(lab({ authority: 'advisory' }), INJECTION);
+  assert.equal(adv.findingCount, 1);
+  assert.equal(adv.findings[0].messages.length, 2, 'two phrases matched: one finding, two messages');
+  assert.equal(adv.logged.length, 1);
+  assert.equal(adv.leftBehind.gatewayLogEntries, 1);
+  assert.equal(run(lab(), INJECTION).findingCount, 1);
+});
+
+test('mergeByCategory: one finding per category, the highest severity, the messages merged without duplicates and bounded', async () => {
+  const { mergeByCategory } = await import('../src/guardPath.js');
+  const m = mergeByCategory([{ category: 'a', severity: 'low', messages: ['x'] }, { category: 'b', severity: 'high', messages: ['y'] }, { category: 'a', severity: 'high', messages: ['x', 'z'] }]);
+  assert.deepEqual(m, [{ category: 'a', severity: 'high', messages: ['x', 'z'] }, { category: 'b', severity: 'high', messages: ['y'] }]);
+  const many = mergeByCategory(Array.from({ length: 30 }, (_, i) => ({ category: 'a', severity: 'low', messages: [`m${i}`] })));
+  assert.equal(many[0].messages.length, BOUNDS.maxMessages);
 });

@@ -78,3 +78,49 @@ test('Reset with a workspace id the lab has never seen creates nothing, so it ne
     assert.equal((await call('/api/reset', 'Bad Id', 'POST')).status, 400);
   } finally { await new Promise((res) => server.close(res)); }
 });
+
+test('an unknown scenario id is a 404 BEFORE the workspace is looked up: 21 of them on fresh ids create no workspace and evict none', async () => {
+  const { createApp, startHttpServer } = await import('../src/app.js');
+  const { validateConfig } = await import('../src/customer.js');
+  const app = createApp({ runChecks: () => [], customer: validateConfig({}), log: () => {}, env: {} });
+  const { server, url } = await startHttpServer({ port: 0, host: '127.0.0.1', app });
+  const base = url.replace(/\/$/, '');
+  try {
+    await fetch(`${base}/api/key`, { headers: { 'x-workspace': 'keep-me' } });
+    const before = app.locals.workspaces.ids();
+    for (let i = 0; i < MAX_WORKSPACES + 1; i++) {
+      const r = await fetch(`${base}/api/scenario/nope`, { method: 'POST', headers: { 'x-workspace': `fresh-${i}`, 'content-type': 'application/json', origin: base }, body: '{}' });
+      assert.equal(r.status, 404);
+    }
+    assert.deepEqual(app.locals.workspaces.ids(), before);
+  } finally { await new Promise((res) => server.close(res)); }
+});
+
+test('the server announces a workspace it just created with X-Workspace-Fresh: 1 (first request, after a Reset, after an eviction) and never on a workspace it already has', async () => {
+  const lab = await startLab();
+  try {
+    const fresh = async (id, p = '/api/key') => (await lab.get(p, { 'x-workspace': id })).headers.get('x-workspace-fresh');
+    assert.equal(await fresh('tab-a'), '1');
+    assert.equal(await fresh('tab-a'), null);
+    await lab.send('POST', '/api/reset', {}, { 'x-workspace': 'tab-a' });
+    assert.equal(await fresh('tab-a'), '1', 'a Reset forgets the workspace, so the next request makes a new one');
+    assert.equal(await fresh('tab-a'), null);
+    // eviction: tab-a is the oldest of the others; 20 more push it out
+    for (let i = 0; i < MAX_WORKSPACES; i++) await fresh(`other-${i}`);
+    assert.equal(await fresh('tab-a'), '1', 'the least recently used workspace was forgotten and is created again');
+    await fresh('default');
+    for (let i = 20; i < 20 + MAX_WORKSPACES; i++) await fresh(`other-${i}`);
+    assert.equal(await fresh('default'), null, 'the default workspace is exempt from the cap');
+    assert.equal((await lab.get('/api/info', { 'x-workspace': 'tab-b' })).headers.get('x-workspace-fresh'), '1');
+  } finally { await lab.close(); }
+});
+
+test('workspaces are kept in least-recently-USED order: a use moves a workspace to the newest end, a peek does not', () => {
+  const ws = createWorkspaces({ build: (id) => ({ id }), max: 3 });
+  ws.get('a'); ws.get('b'); ws.get('c');
+  ws.get('a'); ws.peek('b');
+  assert.deepEqual(ws.ids(), ['default', 'b', 'c', 'a'].filter((x) => x !== 'default' || ws.ids().includes('default')).filter((x) => ws.ids().includes(x)));
+  assert.equal(ws.ids().at(-1), 'a');
+  ws.get('d');
+  assert.ok(!ws.ids().includes('b'), 'b was the least recently used (a peek is not a use)');
+});

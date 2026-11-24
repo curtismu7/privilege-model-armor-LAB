@@ -45,6 +45,8 @@ jobs:
         run: node scripts/validate-content-pack.mjs
 
   forbidden-strings:
+    # A fork's pull request does not get the FORBIDDEN_STRINGS secret, so the job would fail for the wrong reason there.
+    if: github.event.pull_request.head.repo.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

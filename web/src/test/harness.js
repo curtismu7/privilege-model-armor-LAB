@@ -22,6 +22,8 @@ export async function startLab({ overrides = {}, customer = validateConfig({}) }
   return {
     base, calls,
     ws: () => workspaceId(),
+    // What the server does at its workspace cap (or a command-line Reset): forgets this tab's workspace behind the page's back.
+    forgetServerSide: () => nativeFetch(`${base}/api/reset`, { method: "POST", headers: { origin: base, "content-type": "application/json", "x-workspace": workspaceId() }, body: "{}" }),
     json: (path) => nativeFetch(`${base}${path}`, { headers: { "x-workspace": workspaceId() } }).then((r) => r.json()),
     stop: async () => { globalThis.fetch = nativeFetch; await new Promise((res) => server.close(res)); },
   };

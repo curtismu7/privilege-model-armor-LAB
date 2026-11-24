@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { clearScenarioHash } from "../nav.js";
+import { markWorkspaceUnused, onWorkspaceForgotten } from "../workspace.js";
 import { getInfo, getObservability, getStory, postReset, postRun, postScenario, setMode } from "../api";
 
 const say = (r, what) => r.body?.message || `${what} failed (HTTP ${r.status})`;
@@ -19,6 +20,7 @@ export default function useLab() {
   const [last, setLast] = useState(null); // { kind: "live" | "scenario", result, scenario?, runId, trace } or null before any run
   const [obs, setObs] = useState(null); // the run-observability answer for the last run
   const [busy, setBusy] = useState(false);
+  const [forgotten, setForgotten] = useState(false); // the server forgot this tab's workspace (see workspace.js)
   const [epoch, setEpoch] = useState(0);
   const seq = useRef(0);
 
@@ -33,6 +35,8 @@ export default function useLab() {
   }, []);
 
   useEffect(() => { load(undefined); }, [load]);
+  // The server made a new lab for an id this tab had already used: what the page showed is gone. Say so, drop the stale result and load everything again.
+  useEffect(() => onWorkspaceForgotten(() => { clearScenarioHash(); setForgotten(true); setLast(null); setObs(null); setEpoch((n) => n + 1); load(vertical ?? undefined); }), [load, vertical]);
   const setVertical = useCallback((v) => { clearScenarioHash(); setVerticalState(v); setEpoch((n) => n + 1); load(v); }, [load]);
 
   // Rule 19: the server decides. A 409 (Real not available) is shown as the server worded it; nothing else changes.
@@ -77,11 +81,12 @@ export default function useLab() {
 
   const reset = useCallback(async () => {
     const r = await postReset();
+    markWorkspaceUnused(); // the next call will meet a new workspace on purpose: that is not a forgotten one
     clearScenarioHash(); // the address may still name a scenario: Reset takes it out, so the page that opens again does not run it again
-    setLast(null); setObs(null); setEpoch((n) => n + 1);
+    setForgotten(false); setLast(null); setObs(null); setEpoch((n) => n + 1);
     await load(vertical ?? undefined);
     return r.ok;
   }, [load, vertical]);
 
-  return { vertical, setVertical, info, story, source: info?.source || null, error, modeError, last, obs, busy, epoch, reload: () => load(vertical ?? undefined), switchMode, runLive, runScenario, reset };
+  return { vertical, setVertical, info, story, source: info?.source || null, error, modeError, forgotten, dismissForgotten: () => setForgotten(false), last, obs, busy, epoch, reload: () => load(vertical ?? undefined), switchMode, runLive, runScenario, reset };
 }

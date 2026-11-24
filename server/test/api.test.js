@@ -208,3 +208,15 @@ test('unknown API paths are a JSON 404; the error handler never leaks a stack', 
   assert.equal(bad.status, 400);
   assert.equal(/at \w+ \(|node_modules|\/Users\//.test(await bad.text()), false);
 });
+
+test('the body limit covers the longest prompt: 20000 control characters (6 bytes each as JSON) is handled as a prompt, 20001 is the prompt limit, never a 413 too_large', async () => {
+  await reset();
+  assert.ok(BOUNDS.maxBodyBytes >= 6 * BOUNDS.maxPromptChars + 1024);
+  for (const n of [12000, BOUNDS.maxPromptChars]) {
+    const r = await post('/api/run', JSON.stringify({ prompt: '\u0001'.repeat(n) }));
+    assert.equal(r.status, 200, `${n} control characters`);
+  }
+  const over = await post('/api/run', JSON.stringify({ prompt: '\u0001'.repeat(BOUNDS.maxPromptChars + 1) }));
+  assert.deepEqual([over.status, (await over.json()).error], [413, 'prompt_too_large']);
+  await reset();
+});

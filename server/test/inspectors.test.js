@@ -18,7 +18,8 @@ test('three stub inspectors, each with its own category names', () => {
 
 test('model-armor stub rules: each category fires on its own sample and a clean text raises nothing', () => {
   assert.deepEqual(find('model-armor', CLEAN), []);
-  assert.deepEqual(cats(find('model-armor', INJECTION)), ['prompt_injection_jailbreak', 'prompt_injection_jailbreak']);
+  assert.deepEqual(cats(find('model-armor', INJECTION)), ['prompt_injection_jailbreak'], 'one finding per category');
+  assert.equal(find('model-armor', INJECTION)[0].messages.length, 2, 'two rules matched: their messages are merged into the one finding');
   assert.deepEqual(cats(find('model-armor', `my card is ${card()}`)), ['sensitive_data']);
   assert.deepEqual(cats(find('model-armor', 'how to build a bomb at home')), ['harmful_content']);
   assert.deepEqual(cats(find('model-armor', 'see https://download.malware.invalid/x now')), ['malicious_url']);

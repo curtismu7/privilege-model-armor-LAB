@@ -54,7 +54,15 @@ export function createApp({
   app.use('/api/health', health.router);
 
   // The workspace of a request (rule 13): a bad X-Workspace is a 400 with a message, never silently the default.
-  const wsOf = (req) => workspaces.get(workspaceFrom(req));
+  // A workspace the server has to CREATE for this request is announced with `X-Workspace-Fresh: 1`. A page that has already used its id sees that header and knows the server
+  // forgot the workspace (the number kept is bounded, or a Reset on the command line), so the lab it was looking at is gone and it starts from the defaults.
+  const wsOf = (req, res) => {
+    const id = workspaceFrom(req);
+    const fresh = !workspaces.peek(id);
+    const ws = workspaces.get(id);
+    if (fresh && res) res.set('X-Workspace-Fresh', '1');
+    return ws;
+  };
 
   // Every run, live or scenario, leaves the same things behind: one stdout line per decision, the last-run record for the panel and a list entry.
   // runs: [{ run, label }] in order (a scenario has one per prompt step).
@@ -73,7 +81,7 @@ export function createApp({
   }
 
   app.get('/api/info', (req, res) => {
-    const ws = wsOf(req);
+    const ws = wsOf(req, res);
     res.json({
       app: LAB_ID, name: customer.config.name, version, tier: 'Demo',
       source: 'mock', mode: 'mock', realAvailable: false, realReason: NOT_REAL,
@@ -98,22 +106,22 @@ export function createApp({
 
   // A scenario runs on its own fresh lab: the live key below is never touched by it.
   app.post('/api/scenario/:id', (req, res) => {
-    const ws = wsOf(req);
-    if (!findScenario(req.params.id)) return res.status(404).json({ error: 'unknown_scenario', message: 'no such scenario' });
+    if (!findScenario(req.params.id)) return res.status(404).json({ error: 'unknown_scenario', message: 'no such scenario' }); // before the workspace: a 404 creates nothing
+    const ws = wsOf(req, res);
     const out = runScenario(req.params.id);
     const runs = out.steps.filter((s) => s.run).map((s) => ({ run: s.run, label: s.label }));
     const runId = recordRun(ws, { kind: 'scenario', scenarioId: out.id, runs });
     res.json({ ...out, runId, steps: out.steps.map((s) => (s.run ? { ...s, trace: { exchanges: exchangesFor(s.run) } } : s)) });
   });
 
-  app.get('/api/key', (req, res) => res.json(wsOf(req).lab.keyInspector.view()));
+  app.get('/api/key', (req, res) => res.json(wsOf(req, res).lab.keyInspector.view()));
   app.put('/api/key', (req, res) => {
-    const { replaced, view } = wsOf(req).lab.keyInspector.configure(validateKeyPatch(req.body));
+    const { replaced, view } = wsOf(req, res).lab.keyInspector.configure(validateKeyPatch(req.body));
     res.json({ ...view, replaced });
   });
 
   app.post('/api/run', (req, res) => {
-    const ws = wsOf(req);
+    const ws = wsOf(req, res);
     const b = req.body;
     const keys = b && typeof b === 'object' && !Array.isArray(b) ? Object.keys(b) : null;
     if (!keys || keys.length !== 1 || keys[0] !== 'prompt') throw invalidRequest('send exactly { "prompt": "..." }');
@@ -142,11 +150,11 @@ export function createApp({
   // Rule 27: what the last run of this workspace left behind. null before any run.
   app.get('/api/run-observability', async (req, res, next) => {
     try {
-      const ws = wsOf(req);
+      const ws = wsOf(req, res);
       res.json({ record: await buildRunRecord(ws.last, { clock: now }), run: ws.last ? { id: ws.last.id, kind: ws.last.kind, scenarioId: ws.last.scenarioId } : null, streams: STREAMS });
     } catch (e) { next(e); }
   });
-  app.get('/api/log', (req, res) => res.json({ runs: wsOf(req).log }));
+  app.get('/api/log', (req, res) => res.json({ runs: wsOf(req, res).log }));
 
   // Reset clears this workspace only (its lab, last run and list) and gives its slot back.
   app.post('/api/reset', (req, res) => {

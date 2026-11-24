@@ -26,3 +26,9 @@ Demo-tier standalone lab. Step 2 (web): inspector engine, guard path, API, web U
 - Index handles SIGTERM and SIGINT (close, exit 0) so `docker stop` is not a 10 s wait; the start-up line prints the port really bound.
 - Before claiming a port check running containers and compose files (`docker ps`; the ap-* labs use 7839 to 7843), not only the registry and the board. This lab's port is 7846.
 - customer.config problems are never fatal, but they are logged at start-up and shown on the Stories page.
+- Everything shown (response, trace, raw JSON, log lines) is masked after the final text is built, never before something can cut it short: the kit's model reply echoed 40 characters of the raw prompt and truncated a card number or an address past the masks, so the lab's model stub never repeats the prompt (test: no run of four digits and no partial address anywhere).
+- Findings are one per category and direction (messages merged); the model's own answer must not be scored as the prompt's echo.
+- A box or button wrapper handles keys only when `e.target === e.currentTarget`, so buttons inside an opened box work from the keyboard.
+- A 404 must not create state: check the route's resource before looking up (and so creating) the workspace.
+- The body limit must cover the longest allowed prompt as JSON-escaped (6 bytes per control character), so it is judged as a prompt, never refused as a body.
+- A duplicated tab copies sessionStorage: tabs claim their id over a BroadcastChannel and the later one takes a new id; a workspace the server forgot is announced with `X-Workspace-Fresh: 1` and the page says so (its own Reset is not reported).

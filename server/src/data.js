@@ -21,6 +21,7 @@ export const LAB_MODEL = Object.freeze([
   'The timeout is on the lab clock: 500 ms by default, 50 to 10000 ms. A stub that answers in 800 ms therefore times out at 500 ms.',
   'Malformed findings are a named error (inspector_malformed_findings, 502), never a pass: the model is not called, and neither fail open nor advisory turns it into a pass.',
   'Selecting another inspector replaces the first; two at once are refused with the named error two_inspectors and the key keeps what it had.',
+  'Each browser tab keeps its own workspace id in sessionStorage and the server keeps a bounded number of workspaces (the least recently used is forgotten). A duplicated tab copies the id: tabs in the same browser tell each other and the later one takes a new id, but without BroadcastChannel (or when two tabs start at the same moment and both back off) a duplicate can still share a workspace, key and last result. A workspace the server forgot is announced on the page.',
   'The key has nothing to log in with: the stubs need no login, and a real Model Armor login would be write-only (Real mode is not built).',
 ]);
 

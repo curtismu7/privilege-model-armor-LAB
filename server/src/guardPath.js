@@ -21,6 +21,18 @@ const REFUSAL = {
   inspector_timeout: { status: 504, message: 'The gateway blocked this call: the key\'s inspector did not answer in time and the key fails closed.' },
 };
 
+const RANK = { low: 0, medium: 1, high: 2 };
+// One finding per category (the inspector may send several for one category): the highest severity, the messages merged (bounded).
+export function mergeByCategory(found) {
+  const by = new Map();
+  for (const f of found) {
+    const cur = by.get(f.category);
+    if (!cur) by.set(f.category, { ...f, messages: [...f.messages] });
+    else { if (RANK[f.severity] > RANK[cur.severity]) cur.severity = f.severity; for (const m of f.messages) if (cur.messages.length < BOUNDS.maxMessages && !cur.messages.includes(m)) cur.messages.push(m); }
+  }
+  return [...by.values()];
+}
+
 export function runGuard(lab, { prompt }) {
   if (typeof prompt !== 'string') throw invalidRequest('prompt must be a string');
   if (!prompt.trim()) throw invalidRequest('prompt must not be empty');
@@ -64,6 +76,7 @@ export function runGuard(lab, { prompt }) {
     }
     if (!found.length) { hop(name, inspector.id, startedAt, 'clear', '0 findings'); return { stop: null }; }
 
+    found = mergeByCategory(found); // one finding per category and direction, whatever the inspector sent
     const action = key.authority === 'enforcing' ? 'blocked' : 'logged';
     for (const f of found) {
       findings.push({ direction, category: f.category, severity: f.severity, messages: f.messages.map((m) => revealText(m, BOUNDS.maxMessageChars)), action });

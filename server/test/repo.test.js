@@ -95,4 +95,5 @@ test('the CI workflow runs build, test with the UI-standard check, doctor on the
   assert.match(ci, /run: npm run build/);
   assert.match(ci, /run: bash scripts\/check-ui-standard\.sh/);
   assert.match(ci, /validate-content-pack\.mjs/);
+  assert.match(ci, /forbidden-strings:\n(?:    #.*\n)*    if: github\.event\.pull_request\.head\.repo\.fork != true/, 'the forbidden-strings job skips a fork\'s pull request (no secret there)');
 });

@@ -18,6 +18,7 @@ export function verdictOf(run) {
   }
   const x = run.refusal || run.error;
   if (run.outcome === "blocked") return { kind: "blocked", state: "bad", chip: "BLOCKED", line: `The gateway stopped this call itself (origin ${x.origin}), ${x.direction === "response" ? "after the model had answered: the answer is withheld" : "before the model saw the prompt"}.`, code: x.code, status: x.status };
+  if (x.direction === "model") return { kind: "model-error", state: "bad", chip: "MODEL ERROR", line: `The model stub answered with an error (origin ${x.origin}, ${x.code}) after the prompt passed the inspector. The gateway passes that failure on; it is not a finding and not an inspector error.`, code: x.code, status: x.status };
   return { kind: "error", state: "bad", chip: "NAMED ERROR", line: "The inspector answered with findings the gateway cannot read. That is never a pass: the call is stopped and the model is not called.", code: x.code, status: x.status };
 }
 
