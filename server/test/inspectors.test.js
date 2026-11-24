@@ -77,3 +77,12 @@ test('readFindings: every malformed shape is a named error', () => {
   for (const raw of bad) assert.equal(code(() => readFindings(raw, 'model-armor')), 'inspector_malformed_findings', JSON.stringify(raw)?.slice(0, 80));
   assert.deepEqual(readFindings({ findings: Array(BOUNDS.maxFindings).fill(GOOD) }, 'model-armor').length, BOUNDS.maxFindings);
 });
+
+test('the malicious-url stub normalises text first, like the other stubs: a zero-width character cannot hide a bad host', () => {
+  const zw = '\u200b'; const bidi = '\u202e';
+  for (const text of [`open https://download.malware${zw}.invalid/setup now`, `open https://down${zw}load.mal${zw}ware.invalid/x`, `open https://download.malware.invalid${bidi}/setup`]) {
+    const r = createInspector('model-armor').call({ text, direction: 'request' });
+    assert.ok(r.raw.findings.some((f) => f.category === 'malicious_url'), JSON.stringify(text));
+  }
+  assert.equal(createInspector('model-armor').call({ text: 'open https://docs.lab.example/setup', direction: 'request' }).raw.findings.length, 0);
+});

@@ -57,3 +57,24 @@ test('a malformed X-Workspace is a 400 with a message, never silently the defaul
     assert.equal((await lab.send('POST', '/api/reset', {}, { 'x-workspace': 'w5' })).status, 200);
   } finally { await lab.close(); }
 });
+
+test('Reset with a workspace id the lab has never seen creates nothing, so it never pushes the least recently used workspace out at the cap', async () => {
+  const { createApp, startHttpServer } = await import('../src/app.js');
+  const { validateConfig } = await import('../src/customer.js');
+  const app = createApp({ runChecks: () => [], customer: validateConfig({}), log: () => {}, env: {} });
+  const { server, url } = await startHttpServer({ port: 0, host: '127.0.0.1', app });
+  const base = url.replace(/\/$/, '');
+  const call = (p, id, method = 'GET') => fetch(`${base}${p}`, { method, headers: { 'x-workspace': id, 'content-type': 'application/json', origin: base }, body: method === 'POST' ? '{}' : undefined });
+  try {
+    for (let i = 0; i < MAX_WORKSPACES; i++) assert.equal((await call('/api/key', `w${i}`)).status, 200);
+    const before = app.locals.workspaces.ids();
+    assert.equal(before.filter((x) => x !== 'default').length, MAX_WORKSPACES);
+    const r = await call('/api/reset', 'never-seen', 'POST');
+    assert.deepEqual([r.status, (await r.json()).cleared], [200, 0]);
+    assert.deepEqual(app.locals.workspaces.ids(), before, 'nothing was created and nothing was evicted');
+    assert.ok(app.locals.workspaces.ids().includes('w0'), 'the oldest workspace is still there');
+    assert.equal((await call('/api/reset', 'w3', 'POST')).status, 200);
+    assert.ok(!app.locals.workspaces.ids().includes('w3'), 'a known workspace is reset (forgotten) as before');
+    assert.equal((await call('/api/reset', 'Bad Id', 'POST')).status, 400);
+  } finally { await new Promise((res) => server.close(res)); }
+});

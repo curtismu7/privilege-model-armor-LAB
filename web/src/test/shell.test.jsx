@@ -43,12 +43,16 @@ describe("shell: banner, mode toggle, presenter, talk track, reset", () => {
     expect(posts.map((c) => c.body)).toEqual([{ source: "real" }]);
   });
 
-  it("Mock switches back and all data is loaded again", async () => {
-    const user = await h.mount();
+  it("Mock switches back from another mode and all data is loaded again; pressing the active mode sends nothing", async () => {
+    // a page that was told the lab is in Real (a stale page): Mock is then a real switch
+    const user = await h.mount({ overrides: { "/api/info": async (_init, _u, go) => { const r = await go(); return jsonResponse(200, { ...(await r.json()), source: "real", realAvailable: true }); } } });
     const before = h.lab.calls.filter((c) => c.path === "/api/info").length;
     await user.click(screen.getByTestId("mode-mock"));
     await waitFor(() => expect(h.lab.calls.filter((c) => c.path === "/api/info").length).toBeGreaterThan(before));
     expect(h.lab.calls.some((c) => c.path === "/api/mode" && c.body?.source === "mock")).toBe(true);
+    const posts = h.lab.calls.filter((c) => c.path === "/api/mode").length;
+    await user.click(screen.getByTestId("mode-real"));
+    expect(h.lab.calls.filter((c) => c.path === "/api/mode").length).toBe(posts);
   });
 
   it("names a server that is down instead of a blank page, and offers a retry", async () => {

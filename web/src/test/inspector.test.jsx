@@ -3,7 +3,7 @@ import { fireEvent } from "@testing-library/react";
 import { SCENARIOS, runScenario } from "../../../server/src/scenarios.js";
 import { validWorkspace } from "../../../server/src/workspaces.js";
 import { validateConfig } from "../../../server/src/customer.js";
-import { WORKSPACE_ID } from "../workspace.js";
+import { WORKSPACE_ID, fallbackCrypto } from "../workspace.js";
 import { shortcutTarget } from "../nav.js";
 import { jsonResponse } from "./harness.js";
 import { nav, screen, text, useLabHarness, waitFor, within } from "./util.jsx";
@@ -255,7 +255,70 @@ describe("Reset, the address and the first load", () => {
   });
 });
 
+describe("mode switch, vertical change and the address", () => {
+  const stale = (source, realAvailable) => ({ "/api/info": async (_i, _u, go) => { const r = await go(); return jsonResponse(200, { ...(await r.json()), source, realAvailable }); } });
+
+  it("pressing the Mock button while Mock is active changes nothing: no request, the open scenario is not re-run and its result stays", async () => {
+    const user = await h.mount();
+    await user.click(await screen.findByTestId("scenario-clean-prompt-passes"));
+    await screen.findByTestId("verdict");
+    const before = h.lab.calls.length;
+    await user.click(screen.getByTestId("mode-mock"));
+    expect(h.lab.calls.length).toBe(before);
+    expect(screen.getByTestId("verdict")).toBeInTheDocument();
+    expect(window.location.hash).toBe("#inspector/clean-prompt-passes");
+    expect(h.lab.calls.filter((c) => c.method === "POST" && c.path.startsWith("/api/scenario/"))).toHaveLength(1);
+  });
+
+  it("a real mode switch starts the page over WITHOUT re-running the scenario named in the address", async () => {
+    const user = await h.mount({ overrides: stale("real", true) });
+    await user.click(await screen.findByTestId("scenario-clean-prompt-passes"));
+    await screen.findByTestId("verdict");
+    expect(window.location.hash).toBe("#inspector/clean-prompt-passes");
+    await user.click(screen.getByTestId("mode-mock"));
+    await waitFor(() => expect(h.lab.calls.some((c) => c.path === "/api/mode" && c.body?.source === "mock")).toBe(true));
+    await screen.findByTestId("result-empty");
+    expect(window.location.hash).toBe("#inspector");
+    await screen.findByTestId("scenarios");
+    expect(screen.getByTestId("result-empty")).toBeInTheDocument();
+    expect(h.lab.calls.filter((c) => c.method === "POST" && c.path.startsWith("/api/scenario/"))).toHaveLength(1);
+  });
+
+  it("changing the vertical clears the scenario from the address and does not run it again", async () => {
+    const user = await h.mount();
+    await user.click(await screen.findByTestId("scenario-clean-prompt-passes"));
+    await screen.findByTestId("verdict");
+    await user.selectOptions(screen.getByTestId("vertical-select"), "finance");
+    await waitFor(() => expect(window.location.hash).toBe("#inspector"));
+    await screen.findByTestId("scenarios");
+    expect(h.lab.calls.filter((c) => c.method === "POST" && c.path.startsWith("/api/scenario/"))).toHaveLength(1);
+  });
+
+  it("customer.config warnings are shown on the Stories page, in the server's words", async () => {
+    await h.mount({ page: "stories", customer: validateConfig({ vertical: "mining", name: "<b>x</b>" }) });
+    const box = await screen.findByTestId("config-warnings");
+    expect(box).toHaveTextContent(/vertical: must be one of/);
+    expect(box).toHaveTextContent(/name: must be plain text/);
+  });
+  it("a clean customer.config shows no warning box", async () => {
+    await h.mount({ page: "stories" });
+    await screen.findByTestId("story-grid");
+    expect(screen.queryByTestId("config-warnings")).toBeNull();
+  });
+});
+
 describe("keyboard and workspace rules", () => {
+  it("the random-id fallback (no crypto object) fills the array in place: the bytes are not all zero", () => {
+    const real = Math.random; let n = 0; Math.random = () => ((n++ * 37 + 11) % 251) / 251;
+    try {
+      const bytes = new Uint8Array(8);
+      const out = fallbackCrypto.getRandomValues(bytes);
+      expect(out).toBe(bytes);
+      expect([...bytes].some((b) => b !== 0)).toBe(true);
+      expect(new Set(bytes).size).toBeGreaterThan(4);
+    } finally { Math.random = real; }
+  });
+
   it("P toggles presenter mode but never with Ctrl, Meta or Alt, never on a repeat, never in a field or on a button; Escape leaves", () => {
     const key = (o) => shortcutTarget({ key: "p", target: document.body, ...o });
     expect(key({})).toBe("toggle"); expect(key({ key: "P" })).toBe("toggle");

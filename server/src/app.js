@@ -151,9 +151,10 @@ export function createApp({
   // Reset clears this workspace only (its lab, last run and list) and gives its slot back.
   app.post('/api/reset', (req, res) => {
     const id = workspaceFrom(req);
-    const ws = workspaces.get(id);
-    const cleared = ws.lab.runs.length + ws.lab.gatewayLog.length;
-    workspaces.reset(id);
+    // An id the lab has never seen has nothing to clear: it must not be created (that could push the least recently used workspace out at the cap) just to be deleted.
+    const ws = workspaces.peek(id);
+    const cleared = ws ? ws.lab.runs.length + ws.lab.gatewayLog.length : 0;
+    if (ws) workspaces.reset(id);
     res.json({ reset: 'ok', cleared, workspace: id });
   });
 

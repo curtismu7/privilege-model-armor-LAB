@@ -12,6 +12,9 @@ export function installNetguard(allow = []) {
   // The allowlist is empty: this lab has no Real mode yet, so it makes zero real outbound calls. Only loopback may be reached.
   const allowed = new Set(allow.map((h) => String(h).toLowerCase()).filter(Boolean));
   const mayLeave = (h) => isLoopbackHost(h) || allowed.has(String(h).toLowerCase());
+  // A literal IP address needs no name lookup, so looking it up (listen() does, for an opted-in PMA_BIND) reaches no name server. Connecting to it is still
+  // refused by the socket guard below, so only the lookup is allowed.
+  const noLookupNeeded = (h) => net.isIP(String(h)) !== 0;
   const attempts = [];
   const real = {
     connect: net.Socket.prototype.connect, lookup: dns.lookup, fetch: globalThis.fetch, send: dgram.Socket.prototype.send,
@@ -53,7 +56,7 @@ export function installNetguard(allow = []) {
   dns.lookup = function guardedLookup(host, ...rest) {
     // listen() resolves its bind address through lookup. A wildcard bind (the container's 0.0.0.0 bind) is not outbound,
     // and connecting to it is still refused by the socket guard above, so only the lookup is allowed.
-    if (!mayLeave(host) && host !== '0.0.0.0' && host !== '::') {
+    if (!mayLeave(host) && !noLookupNeeded(host) && host !== '0.0.0.0' && host !== '::') {
       attempts.push(`dns:${host}`);
       const cb = rest.find((r) => typeof r === 'function');
       return cb?.(new Error(`network blocked: ${host}`));
@@ -61,7 +64,7 @@ export function installNetguard(allow = []) {
     return real.lookup.call(dns, host, ...rest);
   };
   dns.promises.lookup = async function guardedPromiseLookup(host, ...rest) {
-    if (!mayLeave(host) && host !== '0.0.0.0' && host !== '::') { attempts.push(`dns:${host}`); throw new Error(`network blocked: ${host}`); }
+    if (!mayLeave(host) && !noLookupNeeded(host) && host !== '0.0.0.0' && host !== '::') { attempts.push(`dns:${host}`); throw new Error(`network blocked: ${host}`); }
     return real.plookup.call(dns.promises, host, ...rest);
   };
   globalThis.fetch = async function guardedFetch(input, init) {

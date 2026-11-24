@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { clearScenarioHash } from "../nav.js";
 import { getInfo, getObservability, getStory, postReset, postRun, postScenario, setMode } from "../api";
 
 const say = (r, what) => r.body?.message || `${what} failed (HTTP ${r.status})`;
@@ -32,16 +33,17 @@ export default function useLab() {
   }, []);
 
   useEffect(() => { load(undefined); }, [load]);
-  const setVertical = useCallback((v) => { setVerticalState(v); setEpoch((n) => n + 1); load(v); }, [load]);
+  const setVertical = useCallback((v) => { clearScenarioHash(); setVerticalState(v); setEpoch((n) => n + 1); load(v); }, [load]);
 
   // Rule 19: the server decides. A 409 (Real not available) is shown as the server worded it; nothing else changes.
   const switchMode = useCallback(async (source) => {
+    if (source === info?.source) return { ok: true, unchanged: true }; // pressing the mode that is already active changes nothing: no request, no reload, no lost run
     const r = await setMode(source);
     if (!r.ok) { setModeError(r.body?.message || `The mode did not change (HTTP ${r.status})`); return { ok: false, message: r.body?.message }; }
-    setModeError(null); setLast(null); setObs(null); setEpoch((n) => n + 1);
+    clearScenarioHash(); setModeError(null); setLast(null); setObs(null); setEpoch((n) => n + 1);
     await load(vertical ?? undefined);
     return { ok: true };
-  }, [load, vertical]);
+  }, [load, vertical, info]);
 
   const refreshObs = useCallback(async () => {
     const r = await getObservability();
@@ -75,8 +77,7 @@ export default function useLab() {
 
   const reset = useCallback(async () => {
     const r = await postReset();
-    // The address may still name a scenario ("#inspector/<id>"): Reset takes it out, so the page that opens again does not run it again.
-    try { window.history.replaceState(null, "", `#${window.location.hash.replace("#", "").split("/")[0] || "inspector"}`); } catch { /* ignore */ }
+    clearScenarioHash(); // the address may still name a scenario: Reset takes it out, so the page that opens again does not run it again
     setLast(null); setObs(null); setEpoch((n) => n + 1);
     await load(vertical ?? undefined);
     return r.ok;

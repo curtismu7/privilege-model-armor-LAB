@@ -11,4 +11,18 @@ Demo-tier standalone lab. Step 2 (web): inspector engine, guard path, API, web U
 - Loopback bind, Host check 421, same-origin JSON writes, netguard with a self-test. Only `.example` and `.invalid` hosts in shipped text (a test scans).
 - No AI attribution in commits or files. Never push, never create a repo from here; the GitHub account is `curtismu7`.
 - Vendored byte for byte and pinned (re-vendor from `AI-DEMO-Standalone/shared/`, never edit): `web/src/{top-menu,floating-dialog,diagram-kit,gateway-trace,run-observability}`, `web/src/components/JsonPane*`, `web/src/standalone-ui.css` (`scripts/check-ui-standard.sh`), `server/src/{gatewayTrace,runObservability}.js`, `scripts/run-observability-checkPin.mjs`. The diagram JSON is a byte export of `MODEL_ARMOR_INSPECTOR_FLOW` from diagram-studio-LAB (pinned in `server/diagrams/diagrams.sha256`).
-- Never-repeat lessons: the Docker image copies `docs/talk-track.md`, so `.dockerignore` must re-include it (`!docs/talk-track.md` after `docs/*`) and only a real image build proves it; the first story load sends no `vertical` (a default would hide the customer's); Reset clears the `#inspector/<scenario>` hash so a remount does not run it again; the P shortcut ignores modifiers, repeats and controls; talk-track text renders one paragraph per `\n\n`; the page's workspace pattern equals the server's.
+
+## Never-repeat lessons
+- A Dockerfile COPY source must not be excluded by `.dockerignore`: a compose test checks the pattern, only a real OrbStack build proves it (the talk track is re-included with `!docs/talk-track.md` after `docs/*`).
+- The first story and talk-track load sends no `vertical` (a default would turn "none" into retail and hide the customer's vertical and cast).
+- Reset, a mode switch and a vertical change clear the `#inspector/<scenario>` hash; a page runs a hash scenario only on a deliberate navigation (a link, Show it), never on a remount.
+- Pressing the active Mock button changes nothing: no request, no reload, the open result stays.
+- The workspace-id pattern is the same on the client and the server (a test compares them), and the random-id fallback fills the typed array in place (`map()` leaves it zero).
+- `npm run reset` takes a workspace id (a browser tab's is `w-<16 hex>`) and clears that one workspace only; Reset of a workspace the server has never seen creates nothing, so it cannot evict another.
+- The netguard allows the lookup of a literal IP address (listen() on an opted-in `PMA_BIND` does one); a name is still refused and connecting to the IP is still refused.
+- Every detection stub normalises text first (`normalizeForDetection`), the URL stub too: a zero-width character must not hide a bad host.
+- Shortcut keys ignore modifiers, key repeats and focused controls.
+- Static scans skip `.github/` workflow files and the shared attribution script, and vendored files are exempt from the host scan only because each is pinned.
+- Index handles SIGTERM and SIGINT (close, exit 0) so `docker stop` is not a 10 s wait; the start-up line prints the port really bound.
+- Before claiming a port check running containers and compose files (`docker ps`; the ap-* labs use 7839 to 7843), not only the registry and the board. This lab's port is 7846.
+- customer.config problems are never fatal, but they are logged at start-up and shown on the Stories page.

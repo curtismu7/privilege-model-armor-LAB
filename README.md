@@ -23,7 +23,7 @@ npm start            # http://127.0.0.1:7846/ (page) and /api/ (loopback only)
 ./scripts/run.sh     # install, build, doctor and start in one go
 npm test             # server (node --test), web (vitest) and the repo scripts
 npm run doctor       # preflight: every scenario, stories, diagram, netguard self-test, an HTTP pass, port free
-npm run reset        # POST /api/reset on a running lab
+npm run reset        # POST /api/reset on a running lab: node scripts/reset.mjs [base-url] [workspace]; clears ONE workspace (default: "default"; a browser tab's id is w-<16 hex>, see scripts/reset.mjs)
 npm run content-pack # rebuild and validate content-pack.json (Learning Hub)
 ```
 Docker (OrbStack): `HOST_PORT=7846 docker compose up --build -d` then http://127.0.0.1:7846 (published on loopback only; the image runs as the non-root `node` user with a read-only file system and no capabilities).

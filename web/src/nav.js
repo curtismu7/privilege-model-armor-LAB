@@ -15,3 +15,9 @@ export function shortcutTarget(e) {
   if (t && typeof t.tagName === "string" && (/^(INPUT|TEXTAREA|SELECT|BUTTON|A|SUMMARY)$/.test(t.tagName) || t.isContentEditable)) return null;
   return "toggle";
 }
+
+// Takes a scenario out of the address ("#inspector/<id>" -> "#inspector"). Reset, a mode switch and a vertical change call it, because each starts the page over and a
+// page that opens again must not run the scenario named in the address: a hash scenario runs only on a deliberate navigation (a link, the Stories page's Show it).
+export function clearScenarioHash() {
+  try { window.history.replaceState(null, "", `#${window.location.hash.replace("#", "").split("/")[0] || "inspector"}`); } catch { /* ignore */ }
+}

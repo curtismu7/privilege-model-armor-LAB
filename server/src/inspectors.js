@@ -47,7 +47,7 @@ const sensitive = (text) => {
 };
 const badUrl = (text) => {
   let n = 0;
-  for (const m of String(text).matchAll(/\bhttps?:\/\/([^\s/?#"'`<>\\)]{1,253})/gi)) {
+  for (const m of normalizeForDetection(String(text)).matchAll(/\bhttps?:\/\/([^\s/?#"'`<>\\)]{1,253})/gi)) {
     const host = m[1].replace(/:\d+$/, '').replace(/^[^@]*@/, '');
     if (BAD_HOST.test(host)) n += 1;
   }
