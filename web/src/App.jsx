@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import TopMenu, { applyFontSize } from "./top-menu/TopMenu.jsx";
 import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
+import AboutDialog from "./about/AboutDialog.jsx";
 import ModeToggle from "./components/ModeToggle.jsx";
 import PresenterSay from "./components/PresenterSay.jsx";
 import useLab from "./hooks/useLab";
@@ -39,6 +40,7 @@ export default function App() {
   const [page, setPage] = useState(pageFromHash);
   const [presenter, setPresenter] = useState(false);
   const [talkOpen, setTalkOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [theme, setTheme] = useState(initialTheme);
   const [fontStep, setFontStep] = useState(initialFont);
   const [resetMsg, setResetMsg] = useState("");
@@ -89,6 +91,7 @@ export default function App() {
           talkTrack={{ active: talkOpen, onToggle: () => setTalkOpen((v) => !v) }}
           help={{ href: "https://github.com/curtismu7/privilege-model-armor-LAB#readme" }}
           version={info?.version ? `v${info.version}` : null}
+          onVersion={() => setAboutOpen((v) => !v)}
           onReset={reset}
           extra={<ModeToggle source={source || "mock"} info={info} onSwitch={lab.switchMode} />}
         />
@@ -115,6 +118,7 @@ export default function App() {
           {lab.error && !story ? null : !story || !info ? <p className="muted" role="status">Loading...</p> : <View key={`${page}-${lab.epoch}`} lab={lab} />}
         </div>
       </main>
+      <AboutDialog isOpen={aboutOpen} onClose={() => setAboutOpen(false)} info={info} version={info?.version ? `v${info.version}` : ""} />
       <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={story?.talkTrack ?? []} />
     </div>
   );

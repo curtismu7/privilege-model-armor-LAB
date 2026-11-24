@@ -13,7 +13,7 @@ const sha = (p) => crypto.createHash('sha256').update(fs.readFileSync(p)).digest
 
 // pin file -> the folder its files live in. A pin line is `<hash>  <file>`, or `<hash>  shared/.../<file>`; gatewayTrace.js lives in server/src.
 const GROUPS = [
-  { pin: 'web/src/top-menu/top-menu.sha256', dir: 'web/src/top-menu', files: ['TopMenu.jsx', 'top-menu.css'], extra: ['ReleaseNotes.jsx'] },
+  { pin: 'web/src/top-menu/top-menu.sha256', dir: 'web/src/top-menu', files: ['TopMenu.jsx', 'top-menu.css', 'ReleaseNotes.jsx'] },
   { pin: 'web/src/floating-dialog/floating-dialog.sha256', dir: 'web/src/floating-dialog', files: ['FloatingDialog.jsx', 'floating-dialog.css', 'floating-dialog.test.jsx', 'geometry.js', 'useFloatingPanel.js'] },
   { pin: 'web/src/diagram-kit/diagram-kit.sha256', dir: 'web/src/diagram-kit', files: ['DiagramKit.jsx', 'DiagramKit.test.jsx', 'diagram-kit.css', 'diagramKit.js', 'diagramKit.test.js'] },
   { pin: 'web/src/gateway-trace/gateway-trace.sha256', dir: 'web/src/gateway-trace', files: ['GatewayTrace.jsx', 'gateway-trace.css', 'gateway-trace.test.jsx'], server: { 'gatewayTrace.js': 'server/src/gatewayTrace.js' } },
@@ -57,4 +57,13 @@ test('the vendored canonical JsonPane is used for every JSON pane: no hand-rolle
     assert.doesNotMatch(t, /<pre[^>]*>\s*\{\s*JSON\.stringify/, `${f}: a hand-rolled JSON pane`);
   }
   assert.doesNotMatch(fs.readFileSync(path.join(root, 'web/src/app.css'), 'utf8'), /\.json[^{]*\{[^}]*(max-height|overflow:\s*(auto|scroll))/, 'a JSON pane is full view, never capped');
+});
+
+test('the shared ReleaseNotes dialog (another lab\'s text) is pinned and never shown: App passes onVersion, and no file of this lab but the vendored one says "Token Workbench"', () => {
+  const app = fs.readFileSync(path.join(root, 'web/src/App.jsx'), 'utf8');
+  assert.match(app, /onVersion=\{/);
+  assert.match(app, /<AboutDialog /);
+  for (const f of fs.readdirSync(path.join(root, 'web/src'), { recursive: true }).filter((n) => /\.(jsx?|css)$/.test(n) && !/^(top-menu\/ReleaseNotes\.jsx|test\/)/.test(n.split(path.sep).join('/')))) {
+    assert.doesNotMatch(fs.readFileSync(path.join(root, 'web/src', f), 'utf8'), /Token Workbench/, `${f} names another lab`);
+  }
 });

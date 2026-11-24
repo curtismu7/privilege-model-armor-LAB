@@ -95,6 +95,25 @@ describe("shell: banner, mode toggle, presenter, talk track, reset", () => {
     expect(h.lab.calls.some((c) => c.path === "/api/reset" && c.method === "POST")).toBe(true);
   });
 
+  it("the version button opens THIS lab's notes (never another lab's release notes): Mock only, Real not built, the sourced claims, UNVERIFIED, no claim about detection, a Limits link", async () => {
+    const user = await h.mount();
+    await user.click(screen.getByTestId("version"));
+    const dialog = await screen.findByTestId("about-dialog");
+    expect(screen.queryByTestId("release-notes")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/Token Workbench/);
+    expect(dialog).toHaveTextContent(/Privilege Model Armor LAB v/);
+    expect(dialog).toHaveTextContent(/Mock only/);
+    expect(dialog).toHaveTextContent(/Real mode is not built/);
+    expect(dialog).toHaveTextContent(/UNVERIFIED/);
+    expect(dialog).toHaveTextContent(/no claim about any vendor's detection quality/);
+    const info = await h.lab.json("/api/info");
+    for (const claim of info.sourced) expect(dialog).toHaveTextContent(claim.slice(0, 40));
+    expect(dialog.textContent).not.toMatch(/JWKS|introspection|FAPI/);
+    await user.click(screen.getByTestId("about-limits-link"));
+    await waitFor(() => expect(window.location.hash).toBe("#limits"));
+    await screen.findByTestId("limits-sourced");
+  });
+
   it("every page has a first-level heading and the page's own intro line", async () => {
     const user = await h.mount();
     for (const p of PAGES) { await nav(user, p); expect(screen.getByTestId("head-intro").textContent.length, p).toBeGreaterThan(30); }
